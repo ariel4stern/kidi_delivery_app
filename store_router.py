@@ -23,7 +23,6 @@ class Store(BaseModel):
     store_area: str = Field(...,min_length=1,max_length=20)
 
 class StoreUpdate(BaseModel):
-    up_store_number: int = Field(...,ge=0)
     up_store_name: Optional[str] = Field(...,min_length=1,max_length=50)
     up_store_area: Optional[str] = Field(...,min_length=1,max_length=20)
 
@@ -45,21 +44,29 @@ def insert_store(store: Store):
     return {'status': 'Success', 'store': store}
 
 @router.patch('/patch/{store_number}')
-def patch_store(store_number,update_store: StoreUpdate):
-    store = get_store(update_store.up_store_number)
+def patch_store(store_number:int,update_store: StoreUpdate):
+    store = get_store(store_number)
     if store is None:
-        raise HTTPException(status_code=404, detail='Store not found')
+        raise HTTPException(status_code=400, detail='No fields provided for update')
 
-    updated_store = patch_store_table(store_number=update_store.up_store_number,
+    updated_store = patch_store_table(store_number=store_number,
                                       store_name=update_store.up_store_name,
                                       store_area=update_store.up_store_area)
 
     if updated_store is None:
-        raise HTTPException(status_code=404, detail='Store not found')
+        raise HTTPException(status_code=409, detail='Store already exists')
 
     return {'status': 'Success', 'store': updated_store}
 
-@router.delete('/{store_id}')
+@router.delete('/{store_number}')
+def delete_existing_store(store_number: int):
+    existing_store = get_store(store_number)
+    if existing_store is None:
+        raise HTTPException(status_code=404, detail='Store not found')
+    done = delete_store(store_number=store_number)
+    if not done:
+        raise HTTPException(status_code=409, detail='Store could not be deleted')
+    return {'status': 'Success', 'deleted_store': existing_store}
 
 
 
