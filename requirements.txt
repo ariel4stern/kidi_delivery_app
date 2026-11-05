@@ -1,0 +1,8 @@
+pandas
+numpy
+fastapi
+pydantic
+
+#py -m pip install -r requirements.txt
+
+#pythn 3.11

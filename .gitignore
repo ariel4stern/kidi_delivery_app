@@ -1,0 +1,7 @@
+# created by virtualenv automatically
+.db
+.sqlite
+.env
+.idea
+.venv
+
