@@ -128,10 +128,7 @@ def delete_store(store_number):
     with get_connection() as conn:
         cursor = conn.execute(query, (store_number,))
 
-        if cursor.rowcount == 0:
-            return None
-
-        return store_number
+        return cursor.rowcount > 0
 
 
 
