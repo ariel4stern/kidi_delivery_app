@@ -1,7 +1,131 @@
-# created by virtualenv automatically
-.db
-.sqlite
-.env
-.idea
-.venv
 
+# ==========================================
+# Python - Cache & Compiled Files
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ==========================================
+# Virtual Environments
+# ==========================================
+.venv/
+venv/
+env/
+ENV/
+.conda/
+.python-version
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+secrets/
+credentials/
+
+# ==========================================
+# Databases
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ==========================================
+# IDE - PyCharm / IntelliJ / VS Code
+# ==========================================
+.idea/
+.vscode/
+*.iml
+
+# ==========================================
+# Jupyter Notebook
+# ==========================================
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# ==========================================
+# Logs & Temporary Files
+# ==========================================
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+*.bak
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ==========================================
+# Testing & Coverage
+# ==========================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# ==========================================
+# Build & Distribution
+# ==========================================
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+
+# ==========================================
+# Python Type Checkers & Linters
+# ==========================================
+.mypy_cache/
+.dmypy.json
+.pyre/
+.ruff_cache/
+.pytype/
+
+# ==========================================
+# Machine Learning & Data Science
+# ==========================================
+mlruns/
+wandb/
+lightning_logs/
+tensorboard/
+checkpoints/
+*.h5
+*.keras
+*.pth
+*.pt
+*.onnx
+*.pkl
+*.pickle
+*.joblib
+
+# ==========================================
+# Data Files (Optional)
+# ==========================================
+# Uncomment if you don't want to upload datasets:
+# data/
+# datasets/
+# *.csv
+# *.xlsx
+# *.parquet
+
+# ==========================================
+# OS Generated Files
+# ==========================================
+$RECYCLE.BIN/
+Desktop.ini
