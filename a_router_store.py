@@ -2,17 +2,17 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from dal_stores import (
-    initial_stores,
-    get_store,
-    get_store_table,
-    insert_new_store,
-    patch_store_table,
-    delete_store,
-)
+#from dal_stores import (
+#    initial_stores,
+#    get_store,
+#    get_store_table,
+#    insert_new_store,
+#    patch_store_table,
+#    delete_store,
+#)
 
 
-router = APIRouter(
+stores_router = APIRouter(
     prefix='/stores',
     tags=['stores']
 )
@@ -26,14 +26,14 @@ class StoreUpdate(BaseModel):
     up_store_name: Optional[str] = Field(...,min_length=1,max_length=50)
     up_store_area: Optional[str] = Field(...,min_length=1,max_length=20)
 
-@router.get('/get/{store_number}')
+@stores_router.get('/get/{store_number}')
 def get_exists_store(store_id: int):
     store = get_store(store_id)
     if store is None:
         raise HTTPException(status_code=404, detail='Store not found')
     return {'status': 'Success', 'store': store}
 
-@router.post('/post')
+@stores_router.post('/post')
 def insert_store(store: Store):
     store = insert_new_store(store_number_f=store.store_number,
                              store_name_f=store.store_name,
@@ -43,7 +43,7 @@ def insert_store(store: Store):
 
     return {'status': 'Success', 'store': store}
 
-@router.patch('/patch/{store_number}')
+@stores_router.patch('/patch/{store_number}')
 def patch_store(store_number:int,update_store: StoreUpdate):
     store = get_store(store_number)
     if store is None:
@@ -58,7 +58,7 @@ def patch_store(store_number:int,update_store: StoreUpdate):
 
     return {'status': 'Success', 'store': updated_store}
 
-@router.delete('/{store_number}')
+@stores_router.delete('/{store_number}')
 def delete_existing_store(store_number: int):
     existing_store = get_store(store_number)
     if existing_store is None:

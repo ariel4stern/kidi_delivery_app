@@ -24,3 +24,4 @@ distribution_lines_zip = list(zip(
     ]
 ))
 print(distribution_lines_zip)
+print(len('saturday'))
