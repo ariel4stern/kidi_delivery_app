@@ -1,18 +1,19 @@
 import sqlite3
 from contextlib import contextmanager
+from typing import Dict, Any, Iterator, List
 
-DB_STORES_NAME = "stores.db"
+DB_NAME = "deliveries_distribution.db"
 
 @contextmanager
-def get_connection():
-    conn = sqlite3.connect(DB_STORES_NAME)
+def get_connection() -> Iterator[sqlite3.Connection]:
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
         conn.commit()
-    except Exception as e:
+    except Exception:
         conn.rollback()
-        raise e
+        raise
     finally:
         conn.close()
 
@@ -22,7 +23,7 @@ def create_store_table():
                                                   store_area TEXT NOT NULL);'''
     with get_connection() as conn:
         conn.execute(query)
-def insert_existing_stores():
+def insert_existing_stores() -> int:
     query = '''INSERT INTO stores(store_number,store_name,store_area) VALUES (?,?,?)'''
     stores_dict = {
         "number": [1, 3, 5, 6, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 29, 30, 31,
@@ -56,7 +57,7 @@ def initial_stores():
     else:
         print(f'Table already exists!')
 
-def get_store_table():
+def get_store_table() -> List[ Dict[ str, Any ]] | []  :
     query = '''SELECT * FROM stores;'''
 
     try:
@@ -70,13 +71,15 @@ def get_store_table():
             print(e)
             return []
         raise
-def get_store(store_number):
+def get_store(store_number) -> Dict[str, Any] | None:
     query = '''SELECT * FROM stores WHERE store_number = ?;'''
     with get_connection() as conn:
         row = conn.execute(query, (store_number,)).fetchone()
+        if row is None:
+            return None
         return dict(row) if row else None
 
-def insert_new_store(store_number_f, store_name_f,store_area_f):
+def insert_new_store(store_number_f, store_name_f,store_area_f) -> Dict[str, Any] | None :
     query = '''INSERT INTO stores(store_number,store_name,store_area) VALUES (?,?,?)'''
     try:
         with get_connection() as conn:
@@ -87,14 +90,11 @@ def insert_new_store(store_number_f, store_name_f,store_area_f):
         print(f'Store number: [{store_number_f}], or Store name: [{store_name_f}] already exists!')
         return None
 
-def patch_store_table(store_number:int,store_name=None,store_area=None):
-    if store_name is None and store_area is None:
-        return 'Failure, Not enough store details'
+def patch_store_table(store_number:int,store_name=None,store_area=None) -> Dict[str, Any] | int | None :
+    if all(x is None for x in [store_name, store_area]):
+        return 0
 
-    existing_store = get_store(store_number)
-    if existing_store is None:
-        return None
-
+    print(all(x is None for x in [store_number, store_name, store_area]))
     query = '''UPDATE stores SET '''
     parameters = []
 
@@ -107,6 +107,7 @@ def patch_store_table(store_number:int,store_name=None,store_area=None):
         parameters.append(store_area)
 
     query = query.rstrip(", ") + ' WHERE store_number = ?;'
+    print(query)
     parameters.append(store_number)
 
 
@@ -114,21 +115,31 @@ def patch_store_table(store_number:int,store_name=None,store_area=None):
         with get_connection() as conn:
             cursor = conn.execute(query, parameters)
             if cursor.rowcount == 0:
-                return None
+                return 1
 
     except Exception as e:
-        print(e)
-        return None
+        print(str(e))
+        return 2
 
     return get_store(store_number)
 
-
-def delete_store(store_number):
+def delete_store(store_number) -> bool :
     query = '''DELETE FROM stores WHERE store_number = ?;'''
     with get_connection() as conn:
         cursor = conn.execute(query, (store_number,))
-
         return cursor.rowcount > 0
+
+def drop_stores_table() -> bool:
+    query = "DROP TABLE IF EXISTS stores;"
+
+    try:
+        with get_connection() as conn:
+            conn.execute(query)
+        return True
+
+    except sqlite3.Error as e:
+        print(f"Failed to drop stores table: {e}")
+        return False
 
 
 
