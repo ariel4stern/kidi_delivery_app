@@ -14,13 +14,13 @@ drivers_router = APIRouter(
 )
 
 class NewDriver(BaseModel):
-    d_name: str = Field(...,min_length=1,max_length=30)
-    d_phone: str = Field(...,min_length=9,max_length=11)
+    name: str = Field(...,min_length=1,max_length=30)
+    phone: str = Field(...,min_length=9,max_length=10)
 
 class UpdateDriver(BaseModel):
-    d_name: Optional[str] = Field(None, min_length=1, max_length=30)
-    d_phone: Optional[str] = Field(None, min_length=9, max_length=11)
-    d_status: Optional[str] = Field('not_available', min_length=1, max_length=20)
+    name: Optional[str] = Field(None, min_length=1, max_length=30)
+    phone: Optional[str] = Field(None, min_length=9, max_length=11)
+    status: Optional[str] = Field('not_available', min_length=1, max_length=20)
 
 @drivers_router.get("/")
 def get_drivers():
@@ -34,7 +34,7 @@ def get_drivers():
     }
 
 @drivers_router.get("/{driver_id}")
-def get_driver(driver_id: int):
+def get_existing_driver(driver_id: int):
     driver = get_driver(driver_id)
     if driver is None:
         raise HTTPException(status_code=404,detail="No driver found")
@@ -43,24 +43,24 @@ def get_driver(driver_id: int):
         'driver': driver
     }
 
-@drivers_router.post("/")
+@drivers_router.post("/in")
 def insert_new_driver(new_driver: NewDriver):
-    inserted = insert_driver(d_name=new_driver.d_name, d_phone=new_driver.d_phone)
+    inserted = insert_driver(d_name=new_driver.name, d_phone=new_driver.phone)
     if inserted is None:
-        raise HTTPException(status_code=409,detail="Driver already exists")
+        raise HTTPException(status_code=409,detail="Driver phone already exists")
 
     return {
         'status': "Success",
         'driver': inserted
     }
 
-@drivers_router.patch("/{driver_id}")
+@drivers_router.patch("/patch/{driver_id}")
 def patch_existing_driver(driver_id: int, driver: UpdateDriver):
     existing_driver = get_driver(driver_id)
     if existing_driver is None:
         raise HTTPException(status_code=404,detail="No driver found")
 
-    updated_driver = patch_driver(driver_id,d_name=driver.d_name, d_phone=driver.d_phone, d_status=driver.d_status)
+    updated_driver = patch_driver(driver_id,d_name=driver.name, d_phone=driver.phone, d_status=driver.status)
     if updated_driver == 0:
         raise HTTPException(status_code=400,detail="no parameter provided")
 
@@ -75,7 +75,7 @@ def patch_existing_driver(driver_id: int, driver: UpdateDriver):
         'driver': updated_driver
     }
 
-@drivers_router.delete("/{driver_id}")
+@drivers_router.delete("/del/{driver_id}")
 def delete_existing_driver(driver_id: int):
     del_done = delete_driver(driver_id)
     if not del_done:
