@@ -3,7 +3,7 @@ import sqlite3
 from contextlib import contextmanager
 from typing import List, Iterator, Tuple, Any ,Dict
 
-DB_DELIVERY_NAME = "delivery.db"
+DB_NAME = "deliveries_distribution.db"
 VALID_DAYS = {'sunday', 'monday', 'tuesday','wednesday', 'thursday', 'friday', 'saturday'}
 
 @contextmanager
