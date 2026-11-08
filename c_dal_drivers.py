@@ -2,11 +2,11 @@ import sqlite3
 from contextlib import contextmanager
 from typing import List, Dict, Iterator, Any
 
-DB_DRIVERS_NAME = 'drivers.db'
+DB_NAME = "deliveries_distribution.db"
 
 @contextmanager
 def get_connection() -> Iterator[sqlite3.Connection] :
-    conn = sqlite3.connect(DB_DRIVERS_NAME)
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -93,11 +93,13 @@ def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any] :
             cursor = conn.execute(query, (d_name,d_phone))
             last_id = cursor.lastrowid
 
+        return get_driver(last_id)
+
     except sqlite3.IntegrityError as e:
         print(str(e))
         return None
 
-    return get_driver(last_id)
+
 
 def patch_driver(d_id:int,d_name,d_phone,d_status) -> Dict[str, Any] | int | None :
     if all(x is None for x in [d_name,d_phone,d_status]):
