@@ -22,12 +22,42 @@ def rows_exists(table_name:str) -> bool :
         cursor = conn.execute(query).fetchone()
         return bool(cursor[0])
 
+def check_cartoons_count() -> List[Dict[str,Any]] | None:
+    query = '''SELECT driver_name,cartoons_count FROM drivers WHERE cartoons_count < max_cartoons_count;'''
+    with get_connection() as conn:
+        rows = conn.execute(query).fetchall()
+        if not rows:
+            return None
+        return [dict(r) for r in rows]
+def update_cartoons_count(drive_id:int,add_number:int) -> Dict[str, Any] | None:
+    query = '''
+    UPDATE drivers SET cartoons_count = cartoons_count + ?
+    WHERE driver_id = ?;
+    '''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (add_number, drive_id))
+        if cursor.rowcount == 0:
+            return None
+
+    return get_driver(drive_id)
+def update_max_cartoons_count(new_max:int) -> int | None:
+    query = '''
+    UPDATE drivers SET max_cartoons_count = ?;
+    '''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (new_max,))
+        if cursor.rowcount == 0:
+            return None
+        return new_max
+
 def create_table_drivers():
     query = '''
     CREATE TABLE IF NOT EXISTS drivers (
             driver_id INTEGER NOT NULL PRIMARY KEY,
             driver_name TEXT NOT NULL,
             driver_phone TEXT NOT NULL UNIQUE,
+            cartoons_count INTEGER NOT NULL DEFAULT 0,
+            max_cartoons_count INTEGER NOT NULL DEFAULT 110,
             driver_status TEXT NOT NULL DEFAULT 'not_available'
     );'''
     with get_connection() as conn:
@@ -98,8 +128,6 @@ def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any] :
     except sqlite3.IntegrityError as e:
         print(str(e))
         return None
-
-
 
 def patch_driver(d_id:int,d_name,d_phone,d_status) -> Dict[str, Any] | int | None :
     if all(x is None for x in [d_name,d_phone,d_status]):
