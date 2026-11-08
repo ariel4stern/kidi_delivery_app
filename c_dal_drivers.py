@@ -5,7 +5,7 @@ from typing import List, Dict, Iterator, Any
 DB_DRIVERS_NAME = 'drivers.db'
 
 @contextmanager
-def get_connection()->Iterator[sqlite3.Connection]:
+def get_connection() -> Iterator[sqlite3.Connection] :
     conn = sqlite3.connect(DB_DRIVERS_NAME)
     conn.row_factory = sqlite3.Row
     try:
@@ -16,7 +16,7 @@ def get_connection()->Iterator[sqlite3.Connection]:
         raise
     finally:
         conn.close()
-def rows_exists(table_name:str) -> bool:
+def rows_exists(table_name:str) -> bool :
     query = f'''SELECT EXISTS(SELECT 1 FROM {table_name});'''
     with get_connection() as conn:
         cursor = conn.execute(query).fetchone()
@@ -32,7 +32,7 @@ def create_table_drivers():
     );'''
     with get_connection() as conn:
         conn.execute(query)
-def insert_existing_drivers()-> int | None :
+def insert_existing_drivers() -> int | None :
     drivers_dict = {
         "name" : ['משה','ליאוניד','אוריאל','ישי'],
         "phone": ['050','051','052','053']
@@ -43,7 +43,7 @@ def insert_existing_drivers()-> int | None :
     ))
     query = '''
         INSERT INTO drivers (driver_name, driver_phone)
-        VALUES (?, ?, ?)
+        VALUES (?, ?)
     '''
     try:
         with get_connection() as conn:
@@ -63,7 +63,7 @@ def initial_drivers() -> bool:
     print(f'drivers Table initialized successfully. {inserted} new drivers added.')
     return True
 
-def get_driver(driver_id: int) -> Dict[str, Any] | None:
+def get_driver(driver_id: int) -> Dict[str, Any] | None :
     query = '''
     SELECT * FROM drivers WHERE driver_id = ?;'''
     with get_connection() as conn:
@@ -71,7 +71,7 @@ def get_driver(driver_id: int) -> Dict[str, Any] | None:
         if row is None:
             return None
         return dict(row)
-def get_all_drivers() -> List[Dict[str, Any]] | None:
+def get_all_drivers() -> List[ Dict[str, Any] ] | None :
     query = '''
     SELECT * FROM drivers;'''
     try:
@@ -83,10 +83,10 @@ def get_all_drivers() -> List[Dict[str, Any]] | None:
             return None
         raise
 
-def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any]:
+def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any] :
     query = '''
     INSERT INTO drivers (driver_name, driver_phone)
-        VALUES (?, ?, ?)
+        VALUES ( ?, ?)
     '''
     try:
         with get_connection() as conn:
@@ -99,7 +99,7 @@ def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any]:
 
     return get_driver(last_id)
 
-def patch_driver(d_id:int,d_name,d_phone,d_status) -> Dict[str, Any] | int | None:
+def patch_driver(d_id:int,d_name,d_phone,d_status) -> Dict[str, Any] | int | None :
     if all(x is None for x in [d_name,d_phone,d_status]):
         return 0
 
