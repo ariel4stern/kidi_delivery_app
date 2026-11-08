@@ -8,7 +8,7 @@ VALID_DAYS = {'sunday', 'monday', 'tuesday','wednesday', 'thursday', 'friday', '
 
 @contextmanager
 def get_connection() -> Iterator[sqlite3.Connection]:
-    conn = sqlite3.connect(DB_DELIVERY_NAME)
+    conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
