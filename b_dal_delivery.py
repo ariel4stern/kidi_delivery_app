@@ -4,7 +4,6 @@ from contextlib import contextmanager
 from typing import List, Iterator, Tuple, Any ,Dict
 
 DB_NAME = "deliveries_distribution.db"
-VALID_DAYS = {'sunday', 'monday', 'tuesday','wednesday', 'thursday', 'friday', 'saturday'}
 
 @contextmanager
 def get_connection() -> Iterator[sqlite3.Connection]:
@@ -36,46 +35,58 @@ def create_distribution_lines():
     CREATE TABLE IF NOT EXISTS distribution_lines (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         day TEXT NOT NULL UNIQUE,
-        distribution_line TEXT NOT NULL DEFAULT '[]'
+        distribution_lines TEXT NOT NULL DEFAULT '[]',
+        distribution_areas TEXT NOT NULL DEFAULT '[]'
     );
     '''
     with get_connection() as conn:
         conn.execute(query)
 def insert_existing_distribution_lines()->int:
-    query = '''INSERT INTO distribution_lines(day,distribution_line) VALUES (?,?)
+    query = '''INSERT INTO distribution_lines(day,distribution_lines,distribution_areas) VALUES (?,?,?)
     ON CONFLICT(day) DO NOTHING;'''
     distribution_lines_dict = {
         'day':['sunday', 'monday', 'tuesday','wednesday', 'thursday', 'friday', 'saturday'],
-        'distribution_line':[
+        'distribution_lines':[
             [3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37],
             [17,21,24,25,34,39,22,26,1],
             [1,6,9,12,16,43,704,705,11,14,19,29,35,708],
             [3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37],
             [1,6,9,12,16,43,704,705,11,14,19,29,35,708,17,21,24,25,34,39,22,26],
             [],
-            []
+            []],
+        'distribution_areas':[
+            ['ירושלים','בית_שמש','ביתר'],
+            ['צפון','מודיעין','עזרא'],
+            ['בני_ברק','דרום'],
+            ['ירושלים','בית_שמש','ביתר'],
+            ['בני_ברק','דרום','צפון','מודיעין']
         ]
+
     }
 
     distribution_lines_zip = list(zip(
         distribution_lines_dict['day'],
         [
             json.dumps(lines, ensure_ascii=False)
-            for lines in distribution_lines_dict['distribution_line']
+            for lines in distribution_lines_dict['distribution_lines']
+        ],
+        [
+            json.dumps(lines, ensure_ascii=False)
+            for lines in distribution_lines_dict['distribution_areas']
         ]
     ))
 
     with get_connection() as conn:
         cursor = conn.executemany(query, distribution_lines_zip)
-
         return cursor.rowcount
+
 def initialize_delivery_table():
     create_distribution_lines()
     inserted = insert_existing_distribution_lines()
 
     print(f'Table initialized successfully. {inserted} days added.')
 
-def get_distribution_line(day: str) -> None | Dict[ str, List[str] ] :
+def get_distribution_line(day: str) -> None | Dict[ str, List[str] | List[int] ] :
     query = '''
     SELECT * FROM distribution_lines WHERE day = ?;
     '''
@@ -87,10 +98,11 @@ def get_distribution_line(day: str) -> None | Dict[ str, List[str] ] :
             return None
 
         result = dict(row)
-        result['distribution_line'] = json.loads(result['distribution_line'])
+        result['distribution_lines'] = json.loads(result['distribution_lines'])
+        result['distribution_areas'] = json.loads(result['distribution_areas'])
 
         return result
-def get_distribution_lines_table() -> List[Dict[ str, List[str] ]] | [] | None:
+def get_distribution_lines_table() -> List[Dict[str, List[int] | List[str]]] | None:
     query = '''SELECT * FROM distribution_lines;'''
 
     try:
@@ -102,9 +114,10 @@ def get_distribution_lines_table() -> List[Dict[ str, List[str] ]] | [] | None:
             for row in rows:
                 result = dict(row)
                 # print(type(result['distribution_line'])) = str
-                result['distribution_line'] = json.loads(
-                    result['distribution_line']
-                )
+                result['distribution_lines'] = json.loads( # represent int array
+                    result['distribution_lines'])
+                result['distribution_areas'] = json.loads( # represent str array
+                    result['distribution_areas'])
                 # print(type(result['distribution_line'])) = list
                 results.append(result)
 
@@ -115,24 +128,41 @@ def get_distribution_lines_table() -> List[Dict[ str, List[str] ]] | [] | None:
             return []
         return None
 
-def update_distribution_line(day:str, distribution_line_l:List[int]) -> Dict[str, List[str]] | None:
-    existing = get_distribution_line(day)
-    if existing is None:
-        return None
+def patch_distribution_line(day:str, distribution_line_l:List[int],
+            distribution_area_l:List[str]) -> (Dict[str, List[str] | List[int]] | int | None):
+
+    if all(not x for x in [distribution_line_l, distribution_area_l]):
+        return 0
 
     query = '''
-    UPDATE distribution_lines 
-    SET distribution_line = ? 
-    WHERE day = ?;
-    '''
-    with get_connection() as conn:
-        cursor = conn.execute(query, (json.dumps(distribution_line_l), day))
-        if cursor.rowcount == 0:
-            return None
+    UPDATE distribution_lines SET'''
+    parameters = []
+
+    if distribution_line_l is not None:
+        query = query + f' distribution_lines = ?,'
+        parameters.append(json.dumps(distribution_line_l, ensure_ascii=False))
+
+    if distribution_area_l is not None:
+        query = query + f' distribution_areas = ?,'
+        parameters.append(json.dumps(distribution_area_l, ensure_ascii=False))
+
+    query = query.rstrip(", ") + f' WHERE day = ?;'
+    parameters.append(day)
+
+    try:
+        with get_connection() as conn:
+            cursor = conn.execute(query, parameters)
+            if cursor.rowcount == 0:
+                return 1
+
+    except sqlite3.IntegrityError as e:
+        print(str(e))
+        return 2
+
     return get_distribution_line(day)
 
 def clear_distribution_line(day:str) -> bool:
-    done = update_distribution_line(day, [])
+    done = patch_distribution_line(day, [],[])
     if not done:
         return False
     return True

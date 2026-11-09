@@ -22,34 +22,6 @@ def rows_exists(table_name:str) -> bool :
         cursor = conn.execute(query).fetchone()
         return bool(cursor[0])
 
-def check_cartoons_count() -> List[Dict[str,Any]] | None:
-    query = '''SELECT driver_name,cartoons_count FROM drivers WHERE cartoons_count < max_cartoons_count;'''
-    with get_connection() as conn:
-        rows = conn.execute(query).fetchall()
-        if not rows:
-            return None
-        return [dict(r) for r in rows]
-def update_cartoons_count(drive_id:int,add_number:int) -> Dict[str, Any] | None:
-    query = '''
-    UPDATE drivers SET cartoons_count = cartoons_count + ?
-    WHERE driver_id = ?;
-    '''
-    with get_connection() as conn:
-        cursor = conn.execute(query, (add_number, drive_id))
-        if cursor.rowcount == 0:
-            return None
-
-    return get_driver(drive_id)
-def update_max_cartoons_count(new_max:int) -> int | None:
-    query = '''
-    UPDATE drivers SET max_cartoons_count = ?;
-    '''
-    with get_connection() as conn:
-        cursor = conn.execute(query, (new_max,))
-        if cursor.rowcount == 0:
-            return None
-        return new_max
-
 def create_table_drivers():
     query = '''
     CREATE TABLE IF NOT EXISTS drivers (
@@ -58,6 +30,7 @@ def create_table_drivers():
             driver_phone TEXT NOT NULL UNIQUE,
             cartoons_count INTEGER NOT NULL DEFAULT 0,
             max_cartoons_count INTEGER NOT NULL DEFAULT 110,
+            distribution_area TEXT DEFAULT 'clear' ,
             driver_status TEXT NOT NULL DEFAULT 'not_available'
     );'''
     with get_connection() as conn:
@@ -113,7 +86,7 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
             return None
         raise
 
-def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any] :
+def insert_driver(d_name:str,d_phone:str) -> Dict[str, Any] | None :
     query = '''
     INSERT INTO drivers (driver_name, driver_phone)
         VALUES ( ?, ?)
@@ -121,7 +94,12 @@ def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any] :
     try:
         with get_connection() as conn:
             cursor = conn.execute(query, (d_name,d_phone))
+            if cursor.rowcount == 0:
+                return None
             last_id = cursor.lastrowid
+
+            if last_id is None:
+                return None
 
         return get_driver(last_id)
 
@@ -129,8 +107,9 @@ def insert_driver(d_name:str,d_phone:str) -> None | Dict[str, Any] :
         print(str(e))
         return None
 
-def patch_driver(d_id:int,d_name,d_phone,d_status) -> Dict[str, Any] | int | None :
-    if all(x is None for x in [d_name,d_phone,d_status]):
+def patch_driver(d_id:int,d_name,d_phone,d_cartoons_count,d_max_cartoons,d_distribution_area,d_status) -> Dict[str, Any] | int | None :
+    if all(x is None for x in [d_name,d_phone,d_cartoons_count,d_max_cartoons,
+                                d_distribution_area,d_status]):
         return 0
 
     query = '''
@@ -145,11 +124,21 @@ def patch_driver(d_id:int,d_name,d_phone,d_status) -> Dict[str, Any] | int | Non
         query = query + ' driver_phone = ?,'
         parameters.append(d_phone)
 
+    if d_cartoons_count is not None:
+        query = query + ' cartoons_count = ?,'
+        parameters.append(d_cartoons_count)
+
+    if d_max_cartoons is not None:
+        query = query + ' max_cartoons = ?,'
+        parameters.append(d_max_cartoons)
+
+    if d_distribution_area is not None:
+        query = query + ' distribution_area = ?,'
+        parameters.append(d_distribution_area)
+
     if d_status is not None:
         query = query + ' driver_status = ?,'
         parameters.append(d_status)
-
-
 
     query = query.rstrip(", ") + ' WHERE driver_id = ?;'
     parameters.append(d_id)
