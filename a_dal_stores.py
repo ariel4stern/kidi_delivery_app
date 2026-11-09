@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from contextlib import contextmanager
 from typing import Dict, Any, Iterator, List
@@ -57,7 +58,7 @@ def initial_stores():
     else:
         print(f'Table already exists!')
 
-def get_store_table() -> List[ Dict[ str, Any ]] | []  :
+def get_store_table()  :
     query = '''SELECT * FROM stores;'''
 
     try:
@@ -71,6 +72,7 @@ def get_store_table() -> List[ Dict[ str, Any ]] | []  :
             print(e)
             return []
         raise
+
 def get_store(store_number) -> Dict[str, Any] | None:
     query = '''SELECT * FROM stores WHERE store_number = ?;'''
     with get_connection() as conn:
@@ -78,6 +80,25 @@ def get_store(store_number) -> Dict[str, Any] | None:
         if row is None:
             return None
         return dict(row) if row else None
+def get_stores_area(stores_list: List[int]):
+    if not stores_list:
+        return None
+
+    stores_holders = ",".join("?" for _ in stores_list)
+
+    query = f'''
+        SELECT store_number, store_name, store_area
+        FROM stores
+        WHERE store_number IN ({stores_holders});
+    '''
+
+    with get_connection() as conn:
+        rows = conn.execute(query, stores_list).fetchall()
+
+        if not rows:
+            return None
+
+        return [dict(r) for r in rows]
 
 def insert_new_store(store_number_f, store_name_f,store_area_f) -> Dict[str, Any] | None :
     query = '''INSERT INTO stores(store_number,store_name,store_area) VALUES (?,?,?)'''

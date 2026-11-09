@@ -3,6 +3,3 @@ numpy
 fastapi
 pydantic
 uvicorn
-#py -m pip install -r requirements.txt
-
-#pythn 3.13

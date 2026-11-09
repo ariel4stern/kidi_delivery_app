@@ -10,3 +10,4 @@
 7. if there is even more cartoons left after each driver got his max cartoons,
 system will suggest possible other drivers who not busy.
 8. after all task completed the final step will be to create a file with its details as .docs document & save to specific directory.
+Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -MaxEvents 30 | Where-Object {$_.Id -in 3077,3076,3033} | Select-Object TimeCreated, Id, Message | Format-List

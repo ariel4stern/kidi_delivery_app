@@ -85,6 +85,14 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
         if 'no such table' in str(e):
             return None
         raise
+def get_available_drivers() -> List[ Dict[str, Any] ] | None :
+    query = '''
+    SELECT driver_id,driver_name FROM drivers WHERE driver_status = ?;'''
+    with get_connection() as conn:
+        rows = conn.execute(query, ('available',)).fetchall()
+        if not rows:
+            return None
+        return [dict(r) for r in rows]
 
 def insert_driver(d_name:str,d_phone:str) -> Dict[str, Any] | None :
     query = '''

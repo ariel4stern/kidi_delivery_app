@@ -17,7 +17,7 @@ delivery_router = APIRouter(
 
 class PatchDistributionLine(BaseModel):
     day: str = Field(...,min_length=1,max_length=10)
-    distribution_lines: List[int] = Field([],min_length=1)
+    stores_numbers: List[int] = Field([],min_length=1)
     distribution_areas: List[str] = Field([],min_length=1)
 
 @delivery_router.get('/')
@@ -43,7 +43,7 @@ def patch_existing_distribution_line(updating_distribution_line:PatchDistributio
         raise HTTPException(status_code=404,detail='day not found.')
 
     patched_distribution_line = patch_distribution_line(day=updating_distribution_line.day,
-                                                         distribution_line_l=updating_distribution_line.distribution_lines,
+                                                         stores_numbers_l=updating_distribution_line.stores_numbers,
                                                         distribution_area_l=updating_distribution_line.distribution_areas)
     if patched_distribution_line == 0:
         raise HTTPException(status_code=400,detail='No parameters provided as should.')
