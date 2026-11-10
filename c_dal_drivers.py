@@ -86,13 +86,21 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
             return None
         raise
 def get_available_drivers() -> List[ Dict[str, Any] ] | None :
+
     query = '''
-    SELECT driver_id,driver_name FROM drivers WHERE driver_status = ?;'''
+    SELECT driver_id,driver_name,cartoons_count FROM drivers WHERE driver_status = ?;'''
     with get_connection() as conn:
         rows = conn.execute(query, ('available',)).fetchall()
         if not rows:
             return None
         return [dict(r) for r in rows]
+def get_cartoons_count(driver_id: int) -> int | None:
+    query = '''SELECT cartoons_count FROM drivers WHERE driver_id = ?;'''
+    with get_connection() as conn:
+        row = conn.execute(query, (driver_id,)).fetchone()
+        if not row:
+            return None
+        return row[0]
 
 def insert_driver(d_name:str,d_phone:str) -> Dict[str, Any] | None :
     query = '''
