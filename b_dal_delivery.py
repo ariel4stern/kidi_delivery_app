@@ -12,7 +12,7 @@ def get_connection() -> Iterator[sqlite3.Connection]:
     try:
         yield conn
         conn.commit()
-    except Exception:
+    except sqlite3.OperationalError:
         conn.rollback()
         raise
     finally:
