@@ -62,8 +62,10 @@ def insert_area_distributions() -> int | None:
     INSERT INTO area_distibutions (driver_id ,driver_name ,day ,area_dist) VALUES (?, ?, ?, ?)'''
     try:
         with get_connection() as conn:
-            cursor = conn.execute(query, area_distributions_dict_zip)
-            return cursor.rowcount > 0
+            cursor = conn.executemany(query, area_distributions_dict_zip)
+            if cursor.rowcount == 0:
+                return None
+            return cursor.rowcount
 
     except sqlite3.IntegrityError as e:
         print(str(e))
@@ -79,7 +81,7 @@ def initialize_area_distributions() -> bool:
 
 def insert_new_day(d_id:int,day:str, area_dist:str) -> None | Dict[str,Any]:
     query = f'''
-    INSERT INTO area_distibutions (driver_id,driver_name,day, area_dist,) SELECT driver_id,driver_name,?,? FROM
+    INSERT INTO area_distibutions (driver_id,driver_name,day, area_dist) SELECT driver_id,driver_name,?,? FROM
     drivers WHERE driver_id =  ?'''
     with get_connection() as conn:
         cursor = conn.execute(query, (day, area_dist, d_id))
@@ -90,7 +92,7 @@ def insert_new_day(d_id:int,day:str, area_dist:str) -> None | Dict[str,Any]:
 
 def get_all_dist_point() -> List[Dict[str,Any]] | None:
     query = '''
-    SELECT driver_id, driver_name,day,area_dist FROM area_distibutions'''
+    SELECT * FROM area_distibutions'''
     with get_connection() as conn:
         rows = conn.execute(query).fetchall()
         if not rows:
@@ -99,19 +101,30 @@ def get_all_dist_point() -> List[Dict[str,Any]] | None:
 def get_dist_point(day:str ,area:str) -> Dict[str,Any] | None:
     query = f'''
     SELECT driver_id,driver_name,day, area_dist  FROM area_distibutions WHERE day = ? AND area_dist = ?'''
+    print(query,day,area)
     with get_connection() as conn:
-        row = conn.execute(query, (day,)).fetchone()
+        row = conn.execute(query, (day,area,)).fetchone()
         if not row:
             return None
         return dict(row)
-
-def update_day_area(d_id,day,area_dist) -> None | Dict[str,Any]:
-    query = '''
-    UPDATE area_distibutions SET d_id = ? WHERE day = ? AND area_dist = ?'''
+def get_driver_name(d_id:int)->str|None:
+    query = f'''
+    SELECT driver_name FROM drivers WHERE driver_id = ?'''
     with get_connection() as conn:
-        cursor = conn.execute(query, (d_id, day, area_dist))
-        if cursor.rowcount == 0:
+        row = conn.execute(query, (d_id,)).fetchone()
+        if not row:
             return None
+        return str(row[0])
+def update_day_area(d_id,day,area_dist) -> int | Dict[str,Any] | None:
+    query = '''
+    UPDATE area_distibutions SET driver_id = ?,driver_name=? WHERE day = ? AND area_dist = ?'''
+    d_name = get_driver_name(d_id)
+    if not d_name:
+        return 0
+    with get_connection() as conn:
+        cursor = conn.execute(query, (d_id,d_name, day, area_dist))
+        if cursor.rowcount == 0:
+            return 1
     return get_dist_point(day,area_dist)
 
 def delete_day_area(day,area) -> bool:

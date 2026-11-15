@@ -28,6 +28,7 @@ def get_areas():
         'distribution_points':d_point
     }
 
+# request format: http://127.0.0.1:{{port}}/areas/day_area?day=sunday&area=ירושלים
 @areas_router.get('/day_area')
 def get_area_distribution(day:str,area:str):
     point = get_dist_point(day,area)
@@ -56,14 +57,19 @@ def update_area(area:Area):
     updated_area = update_day_area(d_id=area.d_id,
                                    day=area.day,
                                    area_dist=area.area)
-    if updated_area is None:
+
+    if updated_area is None or updated_area == 1:
         raise HTTPException(status_code=404,detail=f'{area.day},{area.area} not found')
 
+    if updated_area == 0 :
+        raise HTTPException(status_code=404,detail=f'd_id not found')
+
     return {
-        'status':'Success',
+        'status':'Success, Driver_id&Driver_ame',
         'Updated distribution point':updated_area
     }
 
+# request format: http://127.0.0.1:{{port}}/areas/del?day=monday&area=אשדוד
 @areas_router.delete('/del')
 def delete_area(day:str,area:str):
     deleted = delete_day_area(day,area)
@@ -71,6 +77,6 @@ def delete_area(day:str,area:str):
         raise HTTPException(status_code=404,detail=f'{day},{area} not found')
     return {
         'status':'Success',
-        'Deleted distribution point':deleted
+        'Deleted distribution point':f'{day},{area} point Deleted'
     }
 

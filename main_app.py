@@ -1,8 +1,9 @@
 from fastapi import FastAPI
-from b_router_delivery import delivery_router
-from b_dal_delivery import initialize_delivery_table
+from d_dal_area import initialize_area_distributions
+from c_dal_drivers import initial_drivers
+from d_router_area import areas_router
+areas_app = FastAPI()
 
-delivery_app = FastAPI()
-
-initialize_delivery_table()
-delivery_app.include_router(delivery_router)
+initial_drivers()
+initialize_area_distributions()
+areas_app.include_router(areas_router)

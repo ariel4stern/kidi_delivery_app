@@ -86,14 +86,15 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
         if 'no such table' in str(e):
             return None
         raise
-def get_available_drivers() -> List[ Dict[str, Any] ] | None :
-
+def get_available_drivers(count:int) -> List[ Dict[str, Any] ] | int :
+    if count <= 0:
+        return 0
     query = '''
-    SELECT driver_id,driver_name,cartoons_count FROM drivers WHERE driver_status = ?;'''
+    SELECT driver_id,driver_name,cartoons_count FROM drivers WHERE driver_status = ? AND (cartoons_count + ?) <= max_cartoons_count;'''
     with get_connection() as conn:
-        rows = conn.execute(query, ('available',)).fetchall()
+        rows = conn.execute(query, ('available',count,)).fetchall()
         if not rows:
-            return None
+            return 1
         return [dict(r) for r in rows]
 def get_cartoons_count(driver_id: int) -> int | None:
     query = '''SELECT cartoons_count FROM drivers WHERE driver_id = ?;'''
@@ -142,7 +143,7 @@ def patch_driver(d_id:int,d_name,d_phone,d_cartoons_count,d_max_cartoons,d_distr
         parameters.append(d_phone)
 
     if d_cartoons_count is not None:
-        query = query + ' cartoons_count = ?,'
+        query = query + ' cartoons_count = (cartoons_count + ?),'
         parameters.append(d_cartoons_count)
 
     if d_max_cartoons is not None:
