@@ -43,7 +43,7 @@ def create_table_area_distibutions():
 def insert_area_distributions() -> int | None:
     area_distributions_dict = {
         'driver_id': [1] * 17,
-        'name': ['משה'] * 17,
+        'name': ['moshe'] * 17,
         'day': ['sunday', 'sunday', 'sunday', 'monday', 'monday', 'monday', 'tuesday', 'tuesday',
                 'wednesday', 'wednesday', 'wednesday', 'thursday', 'thursday', 'thursday', 'thursday', 'friday',
                 'saturday'],
@@ -99,13 +99,18 @@ def get_all_dist_point() -> List[Dict[str,Any]] | None:
             return None
         return [dict(row) for row in rows]
 def get_dist_point(day:str ,area:str) -> Dict[str,Any] | None:
-    query = f'''
-    SELECT driver_id,driver_name,day, area_dist  FROM area_distibutions WHERE day = ? AND area_dist = ?'''
-    print(query,day,area)
+    query = '''
+    SELECT driver_id, driver_name, day, area_dist
+    FROM area_distibutions
+    WHERE day = ? AND area_dist = ?;
+    '''
+
     with get_connection() as conn:
-        row = conn.execute(query, (day,area,)).fetchone()
-        if not row:
+        row = conn.execute(query, (day, area,)).fetchone()
+
+        if row is None:
             return None
+
         return dict(row)
 def get_driver_name(d_id:int)->str|None:
     query = f'''

@@ -130,16 +130,17 @@ def get_distribution_lines_table() -> List[Dict[str, List[int] | List[str]]] | N
             return []
         return None
 
-def get_today_store_numbers(day:str) -> None | Dict[str,List[int]] :
+def get_today_store_numbers(day:str) -> List[Any] | None:
     query = '''
     SELECT stores_numbers FROM distribution_lines WHERE day = ?;'''
     with get_connection() as conn:
         row = conn.execute(query, (day,)).fetchone()
-        if not row:
+        if row is None:
             return None
         result = dict(row)
-        result['stores_numbers'] = json.loads( result['stores_numbers'])
-        return result
+        result['stores_numbers'] = json.loads(result['stores_numbers'])
+        today_numbers = list(result['stores_numbers'])
+        return today_numbers
 
 def patch_distribution_line(day:str, stores_numbers_l:List[int],
             distribution_area_l:List[str]) -> (Dict[str, List[str] | List[int]] | int | None):

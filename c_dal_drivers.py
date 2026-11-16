@@ -30,16 +30,16 @@ def create_table_drivers():
             driver_name TEXT NOT NULL,
             driver_phone TEXT NOT NULL UNIQUE,
             cartoons_count INTEGER NOT NULL DEFAULT 0,
-            max_cartoons_count INTEGER NOT NULL DEFAULT 110,
+            max_cartoons_count INTEGER NOT NULL DEFAULT 200,
             distribution_area TEXT DEFAULT 'clear' ,
-            driver_status TEXT NOT NULL DEFAULT 'not_available'
+            driver_status TEXT NOT NULL DEFAULT 'available'
     );'''
     with get_connection() as conn:
         conn.execute(query)
 def insert_existing_drivers() -> int | None :
     drivers_dict = {
-        "name" : ['משה','ליאוניד','אוריאל','ישי'],
-        "phone": ['050','051','052','053']
+        "name" : ['moshe','leonid','uriel','ishay'],
+        "phone": ['051','052','053','054']
     }
     drivers_zip = list(zip(
         drivers_dict['name'],
@@ -81,6 +81,8 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
     try:
         with get_connection() as conn:
             rows = conn.execute(query).fetchall()
+            if not rows:
+                return []
             return [dict(r) for r in rows]
     except sqlite3.OperationalError as e:
         if 'no such table' in str(e):
@@ -90,12 +92,13 @@ def get_available_drivers(count:int) -> List[ Dict[str, Any] ] | int :
     if count <= 0:
         return 0
     query = '''
-    SELECT driver_id,driver_name,cartoons_count FROM drivers WHERE driver_status = ? AND (cartoons_count + ?) <= max_cartoons_count;'''
+    SELECT driver_id,driver_name,cartoons_count FROM drivers WHERE (driver_status = ?) AND ((cartoons_count + ?) <= max_cartoons_count);'''
     with get_connection() as conn:
         rows = conn.execute(query, ('available',count,)).fetchall()
         if not rows:
             return 1
         return [dict(r) for r in rows]
+
 def get_cartoons_count(driver_id: int) -> int | None:
     query = '''SELECT cartoons_count FROM drivers WHERE driver_id = ?;'''
     with get_connection() as conn:
@@ -173,7 +176,15 @@ def patch_driver(d_id:int,d_name,d_phone,d_cartoons_count,d_max_cartoons,d_distr
         return 2
 
     return get_driver(d_id)
-
+def update_driver_to_un_available(driver_id:int) -> int :
+    query = '''
+    UPDATE drivers SET driver_status = ? WHERE driver_id = ?;'''
+    with get_connection() as conn:
+        cursor = conn.execute(query, ('un_available',driver_id,))
+        if cursor.rowcount == 0:
+            return 0
+        row_count = cursor.rowcount
+    return int(row_count)
 def delete_driver(d_id:int)-> bool:
     query = '''
     DELETE FROM drivers WHERE driver_id = ?;'''
