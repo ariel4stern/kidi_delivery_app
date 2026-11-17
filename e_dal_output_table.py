@@ -2,6 +2,9 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Iterator, List, Any, Dict
 from datetime import datetime
+
+from select import select
+
 from b_dal_delivery import (
     get_today_store_numbers
 )
@@ -12,6 +15,7 @@ DB_NAME = 'deliveries_distribution.db'
 def get_connection() -> Iterator[sqlite3.Connection] :
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
 
     try:
         yield conn
@@ -41,7 +45,11 @@ def create_output_table() -> None :
         store_count INTEGER DEFAULT 0,
         driver_id INTEGER DEFAULT NULL,
         driver_name TEXT DEFAULT NULL,
-    )'''
+        
+        FOREIGN KEY (driver_id)
+        REFERENCES drivers (driver_id)
+        ON DELETE SET NULL
+        );'''
     with get_connection() as conn:
         conn.execute(query)
 def insert_auto_fields() -> int :
@@ -90,20 +98,31 @@ def get_all_rows_output() -> List[Dict[str,Any]] | None :
             return None
         raise
 
-def insert_row_output(store_number:int, store_count:int, driver_id:int, driver_name:str) -> Dict[str,Any] | None :
+def insert_row_output(store_number:int, store_count:int, driver_id) -> Dict[str,Any] | None :
     query = '''
-    INSERT INTO output_data (store_number, store_count, driver_id, driver_name)
-    VALUES (?, ?, ?, ?)
+    INSERT INTO output_data (store_number, store_count, driver_id)
+    VALUES (?, ?, ?)
     '''
+    parameters = [store_number, store_count, driver_id]
+    if driver_id is not None:
+        select_query = '''
+        SELECT driver_name FROM drivers WHERE driver_id = ?'''
+        with get_connection() as conn:
+            cursor = conn.execute(select_query, (driver_id,)).fetchone()
+            if cursor is None:
+                raise ValueError(f"Not such driver_id {driver_id} ")
+            driver_name = str(cursor[0])
+            parameters.append(driver_name)
+
     with get_connection() as conn:
-        cursor = conn.execute(query, (store_number, store_count, driver_id, driver_name))
+        cursor = conn.execute(query, (store_number, store_count, driver_id))
         if cursor.rowcount == 0:
             return None
     return get_row_output(store_number)
 
-def patch_output_row(store_number,store_count,driver_id,driver_name) -> int | Dict[str,Any] | None :
-    if all(x is None for x in [store_number,store_count,driver_id,driver_name]) or store_number is None:
-        print('store_number must be provided and with him driver_id and driver_name')
+def patch_output_row(store_number,store_count,driver_id) -> int | Dict[str,Any] | None:
+    if all(x is None for x in [store_number,store_count,driver_id]):
+        print('store_number must be provided and with him driver_id')
         return 0
 
     existing_row = get_row_output(store_number)
@@ -115,6 +134,7 @@ def patch_output_row(store_number,store_count,driver_id,driver_name) -> int | Di
     UPDATE output_data SET'''
     parameters = []
 
+
     if store_count is not None:
         query = query + ' store_count = ?,'
         parameters.append(store_count)
@@ -122,22 +142,25 @@ def patch_output_row(store_number,store_count,driver_id,driver_name) -> int | Di
     if driver_id is not None:
         query = query + ' driver_id = ?,'
         parameters.append(driver_id)
+        select_query = '''
+                SELECT driver_name FROM drivers WHERE driver_id = ?
+            '''
+        with get_connection() as conn:
+            cursor = conn.execute(select_query, (driver_id,)).fetchone()
+            if cursor is None:
+                raise ValueError(f"Not such driver_id {driver_id} ")
+            driver_name = str(cursor[0])
+            query = query + ' driver_name = ?,'
+            parameters.append(driver_name)
 
-    if driver_name is not None:
-        query = query + ' driver_name = ?,'
-        parameters.append(driver_name)
 
     query = query.rstrip(', ') + ' WHERE store_number = ?'
-    parameters.append(store_number)
-    try:
-        with get_connection() as conn:
-            cursor = conn.execute(query, (parameters,))
-            if cursor.rowcount == 0:
-                return 2
-
-    except sqlite3.IntegrityError as e:
-        print(str(e))
-        return 3
+    parameters.append(int(store_number))
+    print(query,parameters)
+    with get_connection() as conn:
+        cursor = conn.execute(query, parameters)
+        if cursor.rowcount == 0:
+            return 2
 
     return get_row_output(store_number)
 
@@ -150,7 +173,7 @@ def delete_row_output(store_number:int) -> bool :
 
 def delete_output_table()-> bool :
     query = '''
-    DELETE TABLE IF EXISTS output_data;'''
+    DELETE FROM output_data;'''
     with get_connection() as conn:
         cursor = conn.execute(query)
         return cursor.rowcount > 0
