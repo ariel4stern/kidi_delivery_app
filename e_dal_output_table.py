@@ -41,7 +41,7 @@ def get_current_day():
 def create_output_table() -> None :
     query = '''
     CREATE TABLE IF NOT EXISTS output_data (
-        store_number INTEGER PRIMARY KEY,
+        store_number REAL PRIMARY KEY,
         store_count INTEGER DEFAULT 0,
         driver_id INTEGER DEFAULT NULL,
         driver_name TEXT DEFAULT NULL,
@@ -156,7 +156,7 @@ def patch_output_row(store_number,store_count,driver_id) -> int | Dict[str,Any] 
 
     query = query.rstrip(', ') + ' WHERE store_number = ?'
     parameters.append(int(store_number))
-    print(query,parameters)
+
     with get_connection() as conn:
         cursor = conn.execute(query, parameters)
         if cursor.rowcount == 0:

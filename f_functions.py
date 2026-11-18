@@ -14,6 +14,7 @@ from b_dal_delivery import (
 )
 from c_dal_drivers import (
     get_available_drivers,
+    get_driver,
     get_cartoons_count,
     initial_drivers,
     patch_driver,
@@ -22,13 +23,40 @@ from c_dal_drivers import (
 from d_dal_area import (
     get_dist_point
 )
+from e_dal_output_table import (
+    patch_output_row, get_current_day,get_all_rows_output,
+    get_row_output,insert_row_output
+)
+
 from c_router_drivers import (
     PatchDriver
 )
 
 
 
+def update_output_table(data_frame: pd.DataFrame)->List[Dict[str,Any]]:
+    lst = []
+    data_frame = data_frame[['store_numbers','cartoons_count']].copy()
+    for i in range(len(data_frame)):
+        st_number = int(data_frame.loc[i,'store_numbers'])
+        st_count = int(data_frame.loc[i,'cartoons_count'])
 
+        patched_row = patch_output_row(store_number=st_number,
+                         store_count=st_count,
+                         driver_id=None)
+
+        if patched_row == 0:
+            raise ValueError("parameters provided Wrong.")
+
+        if patched_row == 1:
+            raise ValueError("Not such row in output table.")
+
+        if patched_row == 2:
+            raise ValueError("Row failed to patch.")
+
+        lst.append(patched_row)
+
+    return lst
 
 def check_for_nan_store(dataframe: pd.DataFrame):
     not_nan_values = dataframe[dataframe['driver_id'].notna()].copy().sort_values(by=['cartoons_count'],ascending=False).reset_index(drop=True)
@@ -37,15 +65,24 @@ def check_for_nan_store(dataframe: pd.DataFrame):
         return None
     return nan_values,not_nan_values
 
-
 def prepare_today_distribution_points(today:str) -> None | List[int]  :
-    if not today:
-        return None
     return get_today_store_numbers(today)['store_numbers']
 
+def get_diff_max_cartoons(driver_id:int) -> int | None :
+    driver = get_driver(driver_id)
+    if driver is None:
+        return None
+    cartoons_count = int(driver['cartoons_count'])
+    max_cartoons_count = int(driver['max_cartoons_count'])
+    return max_cartoons_count - cartoons_count
+
+
 def find_dedicated_driver(day:str,area:str,count:int) -> List[str] | int | None :
+    dedicated_drivers_by_area = get_dist_point(str(day),str(area))
+
+
     drivers = get_available_drivers(count)
-    if drivers == 0 :
+    if drivers == 0:
         print('count must be greater than 0')
         return 0
     if drivers == 1:
@@ -56,7 +93,6 @@ def find_dedicated_driver(day:str,area:str,count:int) -> List[str] | int | None 
     print('drivers_ids ',drivers_ids)
     print('day:',day)
     print('area:',area)
-    dedicated_drivers_by_area = get_dist_point(str(day),str(area))
     print('dedicated_drivers_by_area ',dedicated_drivers_by_area)
 
     if dedicated_drivers_by_area['driver_id'] in drivers_ids:
@@ -64,8 +100,7 @@ def find_dedicated_driver(day:str,area:str,count:int) -> List[str] | int | None 
 
     return None
 
-
-def first_allocation_division_distribution_points(dataframe: pd.DataFrame):
+def first_allocation_division_distribution_points(dataframe: pd.DataFrame)->pd.DataFrame|None:
     unfilled_df,filled_df = check_for_nan_store(dataframe)
     if unfilled_df is None:
         return None
@@ -77,6 +112,7 @@ def first_allocation_division_distribution_points(dataframe: pd.DataFrame):
         print(store_area)
         cartoons_count = int(unfilled_df.loc[i,'cartoons_count'])
         print(cartoons_count)
+
         driver = find_dedicated_driver(day=get_current_day(), area=store_area,
                                        count=cartoons_count)
         print('driver',driver)
@@ -116,7 +152,7 @@ def first_allocation_division_distribution_points(dataframe: pd.DataFrame):
     return current_df
 
 
-df_dict ={'store_numbers': [17,26,24,25],
+df_dict ={'store_numbers': [3,5,10,13],
           'cartoons_count': [120,54,12,72],
           'driver_id': [np.nan,np.nan,np.nan,np.nan],
           'driver_name': [np.nan,np.nan,np.nan,np.nan]}
@@ -125,16 +161,6 @@ df = pd.DataFrame(df_dict)
 
 print(first_allocation_division_distribution_points(df))
 
-
-
-def check_left_distribution_points() -> List[int]:
-    pass
-
-def max_problem_allocation_division_distribution_points():
-    pass
-
-def area_problem_allocation_division_distribution_points():
-    pass
 
 def create_final_file():
     pass
