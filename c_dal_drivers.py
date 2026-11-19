@@ -38,8 +38,8 @@ def create_table_drivers():
         conn.execute(query)
 def insert_existing_drivers() -> int | None :
     drivers_dict = {
-        "name" : ['moshe','leonid','uriel','ishay'],
-        "phone": ['051','052','053','054']
+        "name" : ['moshe','leonid','uriel','ishay','nobody'],
+        "phone": ['051','052','053','054','055']
     }
     drivers_zip = list(zip(
         drivers_dict['name'],

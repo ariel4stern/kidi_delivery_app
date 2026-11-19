@@ -27,13 +27,11 @@ def rows_exists(table_name:str) -> bool :
 def create_table_area_distibutions():
     query = '''
     CREATE TABLE IF NOT EXISTS area_distibutions (
-        driver_id INTEGER NOT NULL,
-        driver_name TEXT NOT NULL,
+        driver_id INTEGER DEFAULT 5,
+        driver_name TEXT DEFAULT 'nobody',
         day TEXT NOT NULL,
-        area_dist TEXT NOT NULL,
-    
-        PRIMARY KEY (driver_id, driver_name, day, area_dist),
-    
+        point INTEGER NOT NULL,
+        
         FOREIGN KEY (driver_id)
         REFERENCES drivers(driver_id)
         ON DELETE SET NULL
@@ -44,27 +42,55 @@ def create_table_area_distibutions():
 
 def insert_area_distributions() -> int | None:
     area_distributions_dict = {
-        'driver_id': [1] * 17,
-        'name': ['moshe'] * 17,
-        'day': ['sunday', 'sunday', 'sunday', 'monday', 'monday', 'monday', 'tuesday', 'tuesday',
-                'wednesday', 'wednesday', 'wednesday', 'thursday', 'thursday', 'thursday', 'thursday', 'friday',
+        'driver_id': [2,3,2,2,2,2,3,2,2,1,1,1,1,1,1,1,1,1,
+                      1,1,1,1,1,1,2,2,2,
+                      1,1,1,1,1,1,1,1,2,2,2,2,2,2,
+                      2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,2,2,
+                      1,1,1,1,1,1,1,1,2,2,2,2,2,2,3,3,3,3,3,3,
+                      5,
+                      5],
+        'day': ['sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday','sunday', 'sunday', 'sunday',
+                'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday',
+                'monday', 'monday', 'monday', 'monday', 'monday', 'monday', 'monday', 'monday', 'monday',
+                'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday',
+                'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday',
+                'wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday',
+                'wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday',
+                'wednesday', 'wednesday',
+                'thursday', 'thursday', 'thursday', 'thursday','thursday', 'thursday', 'thursday', 'thursday',
+                'thursday', 'thursday', 'thursday', 'thursday','thursday', 'thursday', 'thursday', 'thursday',
+                'thursday', 'thursday', 'thursday', 'thursday',
+                'friday',
                 'saturday'],
-        'area': ['ירושלים', 'בית_שמש', 'ביתר', 'צפון', 'מודיעין', 'עזרא', 'בני_ברק', 'דרום', 'ירושלים', 'בית_שמש',
-                 'ביתר',
-                 'בני_ברק', 'דרום', 'צפון', 'מודיעין', 'clear', 'clear']
-    }
+        'point': [3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37,
+                 17,21,24,25,34,39,22,26,1,
+                 1,6,9,12,16,43,704,705,11,14,19,29,35,708,
+                 3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37,22,26,
+                 1,6,9,12,16,43,704,705,11,14,19,29,35,708,17,21,24,25,34,39,
+                 404,
+                 404]
+
+
+        }
     area_distributions_dict_zip = list(zip(
         area_distributions_dict['driver_id'],
-        area_distributions_dict['name'],
         area_distributions_dict['day'],
-        area_distributions_dict['area'],
+        area_distributions_dict['point'],
         ))
-
     query = '''
-    INSERT INTO area_distibutions (driver_id ,driver_name ,day ,area_dist) VALUES (?, ?, ?, ?)'''
+        INSERT INTO area_distibutions
+            (driver_id, driver_name, day, point)
+        SELECT ?, driver_name, ?, ?
+        FROM drivers
+        WHERE driver_id = ?;
+        '''
     try:
         with get_connection() as conn:
-            cursor = conn.executemany(query, area_distributions_dict_zip)
+            data = [
+                (driver_id, day, point, driver_id)
+                for driver_id, day, point in area_distributions_dict_zip
+            ]
+            cursor = conn.executemany(query, data)
             if cursor.rowcount == 0:
                 return None
             return cursor.rowcount
@@ -81,16 +107,45 @@ def initialize_area_distributions() -> bool:
     print(f'area_distibutions table created with {inserted} rows')
     return True
 
-def insert_new_day(d_id:int,day:str, area_dist:str) -> None | Dict[str,Any]:
-    query = f'''
-    INSERT INTO area_distibutions (driver_id,driver_name,day, area_dist) SELECT driver_id,driver_name,?,? FROM
-    drivers WHERE driver_id =  ?'''
+def insert_new_day(
+    d_id: int | None,
+    day: str,
+    point: int
+) -> Dict[str, Any] | None:
+
     with get_connection() as conn:
-        cursor = conn.execute(query, (day, area_dist, d_id))
+
+        if d_id is not None:
+            driver = conn.execute(
+                'SELECT driver_name FROM drivers WHERE driver_id = ?',
+                (d_id,)
+            ).fetchone()
+            print(driver[0])
+            if driver is None:
+                return None
+
+            query = '''
+            INSERT INTO area_distibutions
+                (driver_id, driver_name, day, point)
+            VALUES (?, ?, ?, ?);
+            '''
+
+            parameters = (d_id, driver[0], day, point)
+
+        else:
+            query = '''
+            INSERT INTO area_distibutions (day, point)
+            VALUES (?, ?);
+            '''
+
+            parameters = (day, point)
+
+        cursor = conn.execute(query, parameters)
+
         if cursor.rowcount == 0:
             return None
 
-    return get_dist_point(day,area_dist)
+    return get_dist_point(day, point)
 
 def get_all_dist_point() -> List[Dict[str,Any]] | None:
     query = '''
@@ -100,17 +155,17 @@ def get_all_dist_point() -> List[Dict[str,Any]] | None:
         if not rows:
             return None
         return [dict(row) for row in rows]
-def get_dist_point(day:str ,area:str) -> Dict[str,Any] | None:
+def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None:
     query = '''
-    SELECT driver_id, driver_name, day, area_dist
+    SELECT driver_id, driver_name, day, point
     FROM area_distibutions
-    WHERE day = ? AND area_dist = ?;
+    WHERE (day = ? AND point = ?);
     '''
 
     with get_connection() as conn:
-        row = conn.execute(query, (day, area,)).fetchone()
+        row = conn.execute(query, (day, point,)).fetchone()
 
-        if row is None:
+        if not row:
             return None
 
         return dict(row)
@@ -122,23 +177,24 @@ def get_driver_name(d_id:int)->str|None:
         if not row:
             return None
         return str(row[0])
-def update_day_area(d_id,day,area_dist) -> int | Dict[str,Any] | None:
+def update_day_area(d_id,day,point) -> int | Dict[str,Any] | None:
     query = '''
-    UPDATE area_distibutions SET driver_id = ?,driver_name=? WHERE day = ? AND area_dist = ?'''
-    d_name = get_driver_name(d_id)
-    if not d_name:
-        return 0
-    with get_connection() as conn:
-        cursor = conn.execute(query, (d_id,d_name, day, area_dist))
-        if cursor.rowcount == 0:
-            return 1
-    return get_dist_point(day,area_dist)
+    UPDATE area_distibutions SET 
+    driver_id = ?,
+    driver_name=(SELECT driver_name FROM drivers WHERE driver_id = ?)
+    WHERE day = ? AND point = ?;'''
 
-def delete_day_area(day,area) -> bool:
-    query = '''
-    DELETE FROM area_distibutions WHERE day = ? AND area_dist = ?'''
     with get_connection() as conn:
-        cursor = conn.execute(query, (day, area))
+        cursor = conn.execute(query, (d_id,d_id, day, point))
+        if cursor.rowcount == 0:
+            return 0
+    return get_dist_point(day,point)
+
+def delete_day_area(day:str,point:int) -> bool:
+    query = '''
+    DELETE FROM area_distibutions WHERE day = ? AND point = ?'''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (day, point))
         return cursor.rowcount > 0
 
 
