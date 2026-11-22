@@ -117,12 +117,12 @@ checkpoints/
 # ==========================================
 # Data Files (Optional)
 # ==========================================
-# Uncomment if you don't want to upload datasets:
-# data/
-# datasets/
-# *.csv
-# *.xlsx
-# *.parquet
+Uncomment if you don't want to upload datasets:
+data/
+datasets/
+*.csv
+*.xlsx
+*.parquet
 
 # ==========================================
 # OS Generated Files
