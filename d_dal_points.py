@@ -24,9 +24,10 @@ def rows_exists(table_name:str) -> bool :
     with get_connection() as conn:
         cursor = conn.execute(query).fetchone()
         return bool(cursor[0])
-def create_table_area_distibutions():
+
+def create_table_point_distributions():
     query = '''
-    CREATE TABLE IF NOT EXISTS area_distibutions (
+    CREATE TABLE IF NOT EXISTS point_distributions (
         driver_id INTEGER DEFAULT 5,
         driver_name TEXT DEFAULT 'nobody',
         day TEXT NOT NULL,
@@ -40,8 +41,8 @@ def create_table_area_distibutions():
     with get_connection() as conn:
         conn.execute(query)
 
-def insert_area_distributions() -> int | None:
-    area_distributions_dict = {
+def insert_point_distributions() -> int | None:
+    point_distributions_dict = {
         'driver_id': [2,3,2,2,2,2,3,2,2,1,1,1,1,1,1,1,1,1,
                       1,1,1,1,1,1,2,2,2,
                       1,1,1,1,1,1,1,1,2,2,2,2,2,2,
@@ -68,17 +69,17 @@ def insert_area_distributions() -> int | None:
                  3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37,22,26,
                  1,6,9,12,16,43,704,705,11,14,19,29,35,708,17,21,24,25,34,39,
                  404,
-                 404]
+                 405]
 
 
         }
     area_distributions_dict_zip = list(zip(
-        area_distributions_dict['driver_id'],
-        area_distributions_dict['day'],
-        area_distributions_dict['point'],
+        point_distributions_dict['driver_id'],
+        point_distributions_dict['day'],
+        point_distributions_dict['point'],
         ))
     query = '''
-        INSERT INTO area_distibutions
+        INSERT INTO point_distributions
             (driver_id, driver_name, day, point)
         SELECT ?, driver_name, ?, ?
         FROM drivers
@@ -98,20 +99,20 @@ def insert_area_distributions() -> int | None:
     except sqlite3.IntegrityError as e:
         print(str(e))
         return None
-def initialize_area_distributions() -> bool:
-    create_table_area_distibutions()
-    if rows_exists('area_distibutions'):
-        print('area_distibutions table already exists')
+def initialize_point_distributions() -> bool:
+    create_table_point_distributions()
+    if rows_exists('point_distributions'):
+        print('point_distributions table already exists')
         return False
-    inserted = insert_area_distributions()
-    print(f'area_distibutions table created with {inserted} rows')
+    inserted = insert_point_distributions()
+    print(f'point_distributions table created with {inserted} rows')
     return True
 
-def insert_new_day(
+def insert_new_day_point(
     d_id: int | None,
     day: str,
     point: int
-) -> Dict[str, Any] | None:
+) -> Dict[str, Any] | int | None:
 
     with get_connection() as conn:
 
@@ -122,10 +123,10 @@ def insert_new_day(
             ).fetchone()
             print(driver[0])
             if driver is None:
-                return None
+                return 0
 
             query = '''
-            INSERT INTO area_distibutions
+            INSERT INTO point_distributions
                 (driver_id, driver_name, day, point)
             VALUES (?, ?, ?, ?);
             '''
@@ -134,31 +135,37 @@ def insert_new_day(
 
         else:
             query = '''
-            INSERT INTO area_distibutions (day, point)
+            INSERT INTO point_distributions (day, point)
             VALUES (?, ?);
             '''
 
             parameters = (day, point)
 
-        cursor = conn.execute(query, parameters)
+        try:
+            cursor = conn.execute(query, parameters)
 
-        if cursor.rowcount == 0:
-            return None
+            if cursor.rowcount == 0:
+                return 1
+
+        except sqlite3.IntegrityError as e:
+            print(str(e))
+            return 2
 
     return get_dist_point(day, point)
 
 def get_all_dist_point() -> List[Dict[str,Any]] | None:
     query = '''
-    SELECT * FROM area_distibutions'''
+    SELECT * FROM point_distributions'''
     with get_connection() as conn:
         rows = conn.execute(query).fetchall()
         if not rows:
             return None
         return [dict(row) for row in rows]
+
 def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None:
     query = '''
     SELECT driver_id, driver_name, day, point
-    FROM area_distibutions
+    FROM point_distributions
     WHERE (day = ? AND point = ?);
     '''
 
@@ -177,9 +184,9 @@ def get_driver_name(d_id:int)->str|None:
         if not row:
             return None
         return str(row[0])
-def update_day_area(d_id,day,point) -> int | Dict[str,Any] | None:
+def update_day_point(d_id,day,point) -> int | Dict[str,Any] | None:
     query = '''
-    UPDATE area_distibutions SET 
+    UPDATE point_distibutions SET 
     driver_id = ?,
     driver_name=(SELECT driver_name FROM drivers WHERE driver_id = ?)
     WHERE day = ? AND point = ?;'''
@@ -190,9 +197,9 @@ def update_day_area(d_id,day,point) -> int | Dict[str,Any] | None:
             return 0
     return get_dist_point(day,point)
 
-def delete_day_area(day:str,point:int) -> bool:
+def delete_day_point(day:str,point:int) -> bool:
     query = '''
-    DELETE FROM area_distibutions WHERE day = ? AND point = ?'''
+    DELETE FROM point_distibutions WHERE day = ? AND point = ?'''
     with get_connection() as conn:
         cursor = conn.execute(query, (day, point))
         return cursor.rowcount > 0

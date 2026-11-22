@@ -88,25 +88,43 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
         if 'no such table' in str(e):
             return None
         raise
-def get_available_drivers(count:int) -> List[ Dict[str, Any] ] | int :
-    if count <= 0:
-        return 0
+def get_drivers_count() -> Dict[str, Any] | int :
     query = '''
-    SELECT driver_id,driver_name,cartoons_count FROM drivers
-    WHERE (driver_status = ?) AND ((cartoons_count + ?) <= max_cartoons_count);'''
+    SELECT driver_id,driver_name,cartoons_count FROM drivers;'''
     with get_connection() as conn:
-        rows = conn.execute(query, ('available',count,)).fetchall()
-        if not rows:
+        row = conn.execute(query).fetchone()
+        if not row:
             return 1
-        return [dict(r) for r in rows]
+
+        return dict(row)
+
 
 def get_cartoons_count(driver_id: int) -> int | None:
-    query = '''SELECT cartoons_count FROM drivers WHERE driver_id = ?;'''
+    query = '''SELECT cartoons_count FROM drivers WHERE driver_id = ? AND driver_status like "available";'''
     with get_connection() as conn:
         row = conn.execute(query, (driver_id,)).fetchone()
         if not row:
             return None
         return row[0]
+
+def get_max_cartoons(d_id:int)->int|None:
+    query = '''
+    SELECT max_cartoons_count FROM drivers 
+            WHERE driver_id = ?;'''
+    with get_connection() as conn:
+        row = conn.execute(query, (d_id,)).fetchone()
+        if not row:
+            return None
+        return row[0]
+
+def get_available_drivers()->List[ Dict[str, Any] ] | None :
+    query = '''
+    SELECT driver_id,driver_status FROM drivers WHERE driver_status like "available";'''
+    with get_connection() as conn:
+        rows = conn.execute(query,).fetchall()
+        if not rows:
+            return None
+        return [dict(r) for r in rows]
 
 def insert_driver(d_name:str,d_phone:str) -> Dict[str, Any] | None :
     query = '''

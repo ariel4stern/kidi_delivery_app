@@ -75,7 +75,7 @@ def initialize_output_table()-> bool | None :
     print(f'output_data Table initialized successfully. {inserted} new row added.')
     return True
 
-def get_row_output(store_number:int) -> Dict[str,Any] | None :
+def get_row_output(store_number:float) -> Dict[str,Any] | None :
     query = '''
     SELECT store_number, store_count, driver_id, driver_name FROM output_data WHERE store_number = ?'''
     with get_connection() as conn:
@@ -98,7 +98,7 @@ def get_all_rows_output() -> List[Dict[str,Any]] | None :
             return None
         raise
 
-def insert_row_output(store_number:int, store_count:int, driver_id) -> Dict[str,Any] | None :
+def insert_row_output(store_number:float, store_count:int, driver_id) -> Dict[str,Any] | None :
     query = '''
     INSERT INTO output_data (store_number, store_count, driver_id)
     VALUES (?, ?, ?)
@@ -163,8 +163,25 @@ def patch_output_row(store_number,store_count,driver_id) -> int | Dict[str,Any] 
             return 2
 
     return get_row_output(store_number)
+def update_output_number(st_number:float,count:int,d_id:int) -> Dict[str,Any] | None:
+    query = '''
+    UPDATE output_data SET
+        store_number = ?,
+        store_count  = ?,
+        driver_id = ?,
+        driver_name  = (SELECT driver_name FROM drivers WHERE driver_id = ?)
+    WHERE store_number = ?
+    '''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (st_number,count,d_id,d_id,st_number))
+        if cursor.rowcount == 0:
+            return None
 
-def delete_row_output(store_number:int) -> bool :
+    return get_row_output(st_number)
+
+
+
+def delete_row_output(store_number:float) -> bool :
     query = '''
     DELETE FROM output_data WHERE store_number = ?'''
     with get_connection() as conn:

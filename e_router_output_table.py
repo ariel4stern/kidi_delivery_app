@@ -7,7 +7,8 @@ from e_dal_output_table import (
     insert_row_output,
     patch_output_row,
     delete_row_output,
-    delete_output_table
+    delete_output_table,
+    get_current_day
 )
 
 output_router = APIRouter(
@@ -16,7 +17,7 @@ output_router = APIRouter(
 )
 
 class OutputData(BaseModel):
-    output_number : int = Field(...,gt=0)
+    output_number : float = Field(...,gt=0)
     output_count : int = Field(...,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
 
@@ -55,7 +56,7 @@ def insert_new_output_row(output_data:OutputData):
 
     return {
         'status':"Success",
-        'inserted row': inserted
+        'inserted_row': inserted
     }
 
 @output_router.patch("/patch/{output_number}")
@@ -74,7 +75,7 @@ def patch_output_data(output_number,output_data:PatchOutputData):
 
     return {
         'status':"Success",
-        'updated row': patched_row
+        'updated_row': patched_row
     }
 
 @output_router.delete("/del/{output_number}")
