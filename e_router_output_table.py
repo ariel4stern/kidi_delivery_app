@@ -1,20 +1,25 @@
+import os
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel,Field
 from typing import Optional
+
+
 from e_dal_output_table import (
     get_all_rows_output,
     get_row_output,
     insert_row_output,
     patch_output_row,
     delete_row_output,
-    delete_output_table,
-    get_current_day
+    delete_output_table
 )
 
 output_router = APIRouter(
     prefix="/output_data",
     tags=["output_data"]
 )
+
+BASE_DIR = os.getcwd()
+REPORTS_DIR_PATH = os.path.join(BASE_DIR,"distribution_reports")
 
 class OutputData(BaseModel):
     output_number : float = Field(...,gt=0)

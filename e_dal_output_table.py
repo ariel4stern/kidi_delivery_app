@@ -38,13 +38,14 @@ def get_current_day():
     day_name = today.strftime("%A")
 
     return day_name.lower()
+
 def create_output_table() -> None :
     query = '''
     CREATE TABLE IF NOT EXISTS output_data (
         store_number REAL PRIMARY KEY,
         store_count INTEGER DEFAULT 0,
-        driver_id INTEGER DEFAULT NULL,
-        driver_name TEXT DEFAULT NULL,
+        driver_id INTEGER DEFAULT 5,
+        driver_name TEXT DEFAULT 'nobody',
         
         FOREIGN KEY (driver_id)
         REFERENCES drivers (driver_id)
@@ -64,7 +65,6 @@ def insert_auto_fields() -> int :
     with get_connection() as conn:
         cursor = conn.executemany(query, [(num,) for num in today_numbers])
         return cursor.rowcount
-
 def initialize_output_table()-> bool | None :
     create_output_table()
     if rows_exists("output_data"):
@@ -174,6 +174,18 @@ def update_output_number(st_number:float,count:int,d_id:int) -> Dict[str,Any] | 
     '''
     with get_connection() as conn:
         cursor = conn.execute(query, (st_number,count,d_id,d_id,st_number))
+        if cursor.rowcount == 0:
+            return None
+
+    return get_row_output(st_number)
+def update_output_count_driver_null(st_number:float,count:int) -> Dict[str,Any] | None:
+    query = '''
+    UPDATE output_data SET
+        store_count  = ?
+    WHERE store_number = ?
+    '''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (count,st_number))
         if cursor.rowcount == 0:
             return None
 

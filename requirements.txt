@@ -3,3 +3,5 @@ numpy
 fastapi
 pydantic
 uvicorn
+openpyxl
+starlette

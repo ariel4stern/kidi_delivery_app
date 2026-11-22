@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from typing import List,Dict,Optional
+from typing import Optional
 from pydantic import BaseModel,Field
 from d_dal_points import (
     get_all_dist_point,
@@ -33,7 +33,7 @@ def get_points():
         'distribution_points':d_point
     }
 
-# request format: http://127.0.0.1:{{port}}/areas/day_point?day=sunday&point=1
+# request format: http://127.0.0.1:{{port}}/points/day_point?day=sunday&point=1
 @point_router.get('/day_point')
 def get_point_distributions(day:str,point:int):
     selected_point = get_dist_point(day,point)
@@ -81,7 +81,7 @@ def update_area(p:UpdatePoint):
         'Updated distribution point':updated_point
     }
 
-# request format: http://127.0.0.1:{{port}}/areas/del?day=monday&point=1
+# request format: http://127.0.0.1:{{port}}/points/del?day=monday&point=1
 @point_router.delete('/day_point/del')
 def delete_point(day:str,point:int):
     deleted = delete_day_point(day,point)

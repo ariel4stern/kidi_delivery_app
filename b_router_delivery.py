@@ -7,7 +7,7 @@ from b_dal_delivery import (
     get_distribution_line,
     get_distribution_lines_table,
     clear_distribution_line,
-    drop_distribution_line_table
+    delete_distribution_line_table
 )
 
 delivery_router = APIRouter(
@@ -67,7 +67,7 @@ def clear_existing_distribution_line(day:str):
 
 @delivery_router.delete('/reset')
 def reset_distribution_line():
-    done = drop_distribution_line_table()
+    done = delete_distribution_line_table()
     if not done:
         raise HTTPException(status_code=409,detail='Distribution line Table Failed to Delete.')
     initialize_delivery_table()

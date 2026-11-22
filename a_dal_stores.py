@@ -1,4 +1,3 @@
-import json
 import sqlite3
 from contextlib import contextmanager
 from typing import Dict, Any, Iterator, List
@@ -17,6 +16,11 @@ def get_connection() -> Iterator[sqlite3.Connection]:
         raise
     finally:
         conn.close()
+def rows_exists(table_name:str) -> bool :
+    query = f'''SELECT EXISTS(SELECT 1 FROM {table_name});'''
+    with get_connection() as conn:
+        cursor = conn.execute(query).fetchone()
+        return bool(cursor[0])
 
 def create_store_table():
     query = '''CREATE TABLE IF NOT EXISTS stores (store_number INTEGER PRIMARY KEY,
@@ -50,13 +54,15 @@ def insert_existing_stores() -> int:
     with get_connection() as conn:
         cursor = conn.executemany(query,stores)
         return cursor.rowcount
-def initial_stores():
-    if len(get_store_table()) == 0:
-        create_store_table()
-        inserted = insert_existing_stores()
-        print(f'Stores Table initialized successfully. {inserted} new stores added.')
-    else:
+def initialize_stores() -> bool:
+    create_store_table()
+    if rows_exists('stores'):
         print(f'Table already exists!')
+        return False
+
+    inserted = insert_existing_stores()
+    print(f'Stores Table initialized successfully. {inserted} new stores added.')
+    return True
 
 def get_store_table()  :
     query = '''SELECT * FROM stores;'''
@@ -80,25 +86,6 @@ def get_store(store_number) -> Dict[str, Any] | None:
         if row is None:
             return None
         return dict(row) if row else None
-def get_stores_area(stores_list: List[int]):
-    if not stores_list:
-        return None
-
-    stores_holders = ",".join("?" for _ in stores_list)
-
-    query = f'''
-        SELECT store_number, store_name, store_area
-        FROM stores
-        WHERE store_number IN ({stores_holders});
-    '''
-
-    with get_connection() as conn:
-        rows = conn.execute(query, stores_list).fetchall()
-
-        if not rows:
-            return None
-
-        return [dict(r) for r in rows]
 
 def insert_new_store(store_number_f, store_name_f,store_area_f) -> Dict[str, Any] | None :
     query = '''INSERT INTO stores(store_number,store_name,store_area) VALUES (?,?,?)'''
@@ -150,8 +137,8 @@ def delete_store(store_number) -> bool :
         cursor = conn.execute(query, (store_number,))
         return cursor.rowcount > 0
 
-def drop_stores_table() -> bool:
-    query = "DROP TABLE IF EXISTS stores;"
+def delete_stores_table() -> bool:
+    query = "DELETE FROM stores;"
 
     try:
         with get_connection() as conn:
@@ -159,7 +146,7 @@ def drop_stores_table() -> bool:
         return True
 
     except sqlite3.Error as e:
-        print(f"Failed to drop stores table: {e}")
+        print(f"Failed to delete stores table: {e}")
         return False
 
 

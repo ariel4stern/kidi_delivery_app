@@ -24,7 +24,6 @@ class PatchDriver(BaseModel):
     status: Optional[str]               = Field(None, min_length=1, max_length=20)
     cartoons_count: Optional[int]       = Field(None, gt=0, lt=150)
     max_cartoons: Optional[int]         = Field(None, gt=0, lt=250)
-    distribution_area: Optional[str]    = Field(None, min_length=1, max_length=20)
 
 @drivers_router.get("/")
 def get_drivers():
@@ -65,8 +64,7 @@ def patch_existing_driver(driver_id: int, driver: PatchDriver):
         raise HTTPException(status_code=404,detail="No driver found")
 
     updated_driver = patch_driver(driver_id,d_name=driver.name, d_phone=driver.phone,
-                                  d_cartoons_count=driver.cartoons_count,d_max_cartoons=driver.max_cartoons,
-                                  d_distribution_area=driver.distribution_area,d_status=driver.status)
+                                  d_cartoons_count=driver.cartoons_count,d_max_cartoons=driver.max_cartoons,d_status=driver.status)
     if updated_driver == 0:
         raise HTTPException(status_code=400,detail="no parameter provided")
 

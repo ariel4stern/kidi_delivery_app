@@ -5,7 +5,7 @@ from typing import List, Dict, Iterator, Any
 DB_NAME = 'deliveries_distribution.db'
 
 @contextmanager
-def get_connection() -> Iterator[sqlite3.Connection]:
+def get_connection() -> Iterator[sqlite3.Connection] :
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
@@ -25,7 +25,7 @@ def rows_exists(table_name:str) -> bool :
         cursor = conn.execute(query).fetchone()
         return bool(cursor[0])
 
-def create_table_point_distributions():
+def create_table_point_distributions() -> None :
     query = '''
     CREATE TABLE IF NOT EXISTS point_distributions (
         driver_id INTEGER DEFAULT 5,
@@ -41,7 +41,7 @@ def create_table_point_distributions():
     with get_connection() as conn:
         conn.execute(query)
 
-def insert_point_distributions() -> int | None:
+def insert_point_distributions() -> int | None :
     point_distributions_dict = {
         'driver_id': [2,3,2,2,2,2,3,2,2,1,1,1,1,1,1,1,1,1,
                       1,1,1,1,1,1,2,2,2,
@@ -104,15 +104,12 @@ def initialize_point_distributions() -> bool:
     if rows_exists('point_distributions'):
         print('point_distributions table already exists')
         return False
+
     inserted = insert_point_distributions()
     print(f'point_distributions table created with {inserted} rows')
     return True
 
-def insert_new_day_point(
-    d_id: int | None,
-    day: str,
-    point: int
-) -> Dict[str, Any] | int | None:
+def insert_new_day_point(d_id: int | None ,day: str ,point: int) -> Dict[str ,Any] | int | None :
 
     with get_connection() as conn:
 
@@ -153,7 +150,7 @@ def insert_new_day_point(
 
     return get_dist_point(day, point)
 
-def get_all_dist_point() -> List[Dict[str,Any]] | None:
+def get_all_dist_point() -> List[Dict[str,Any]] | None :
     query = '''
     SELECT * FROM point_distributions'''
     with get_connection() as conn:
@@ -162,7 +159,7 @@ def get_all_dist_point() -> List[Dict[str,Any]] | None:
             return None
         return [dict(row) for row in rows]
 
-def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None:
+def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None :
     query = '''
     SELECT driver_id, driver_name, day, point
     FROM point_distributions
@@ -176,15 +173,8 @@ def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None:
             return None
 
         return dict(row)
-def get_driver_name(d_id:int)->str|None:
-    query = f'''
-    SELECT driver_name FROM drivers WHERE driver_id = ?'''
-    with get_connection() as conn:
-        row = conn.execute(query, (d_id,)).fetchone()
-        if not row:
-            return None
-        return str(row[0])
-def update_day_point(d_id,day,point) -> int | Dict[str,Any] | None:
+
+def update_day_point(d_id,day,point) -> int | Dict[str,Any] | None :
     query = '''
     UPDATE point_distibutions SET 
     driver_id = ?,
@@ -197,7 +187,7 @@ def update_day_point(d_id,day,point) -> int | Dict[str,Any] | None:
             return 0
     return get_dist_point(day,point)
 
-def delete_day_point(day:str,point:int) -> bool:
+def delete_day_point(day:str,point:int) -> bool :
     query = '''
     DELETE FROM point_distibutions WHERE day = ? AND point = ?'''
     with get_connection() as conn:
