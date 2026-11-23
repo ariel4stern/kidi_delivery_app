@@ -87,7 +87,7 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
         if 'no such table' in str(e):
             return None
         raise
-def get_drivers_name_ids() -> List[Dict[str,Any]]|[]:
+def get_drivers_name_ids() -> List[Dict[str,Any]] | None:
     query ='''
     SELECT driver_id,driver_name FROM drivers;'''
     with get_connection() as conn:
@@ -95,7 +95,7 @@ def get_drivers_name_ids() -> List[Dict[str,Any]]|[]:
         if not rows:
             return []
         return [dict(r) for r in rows]
-def get_drivers_name_ids_status() -> List[Dict[str,Any]]|[]:
+def get_drivers_name_ids_status() -> List[Dict[str,Any]]| None:
     query ='''
     SELECT driver_id,driver_name,driver_status FROM drivers;'''
     with get_connection() as conn:
@@ -216,12 +216,26 @@ def update_driver_count(d_id:int,d_cartoons_count:int) -> int :
         row_count = cursor.rowcount
 
     return int(row_count)
+
 def delete_driver(d_id:int)-> bool:
     query = '''
     DELETE FROM drivers WHERE driver_id = ?;'''
     with get_connection() as conn:
         cursor = conn.execute(query, (d_id,))
         return cursor.rowcount > 0
+
+def reset_cartoons_count()-> int:
+    query = '''
+    UPDATE drivers SET cartoons_count = 0;'''
+    with get_connection() as conn:
+        cursor = conn.execute(query)
+        if cursor.rowcount == 0:
+            return 0
+        row_count = cursor.rowcount
+
+    return int(row_count)
+
+
 
 
 

@@ -13,7 +13,8 @@ from c_dal_drivers import (
 )
 
 from d_dal_points import (
-    get_dist_point
+    get_dist_point,
+    rows_exists
 )
 
 from e_dal_output_table import (
@@ -29,6 +30,14 @@ from e_router_output_table import (
     OutputData,
     patch_output_data,
     insert_new_output_row
+)
+from eb_router_output_table_two import (
+    OutputDataTwo,
+    UpdateOutputDataId,
+    update_output_data_two_by_number,
+    insert_new_output_two_row,
+    get_all_rows_output_two
+
 )
 
 BASE_DIR = os.getcwd()
@@ -80,13 +89,11 @@ def approve_driver_count(d_id:int ,count:int ,point:float) -> bool | None :
         print("checking_approv")
         poss_cartoons = max_cartoons_per_driver - cartoons_count_driver
 
-        data_output_unuse = OutputData(output_number=point + 0.2,
+        data_output_unuse = OutputDataTwo(output_number=point,
                                        output_count=count - poss_cartoons,
                                        driver_id=None)
 
-        insert_new_output_row(data_output_unuse)
-
-        clear_output_driver(point + 0.2, count - poss_cartoons)  # remainder stays NaN
+        insert_new_output_two_row(data_output_unuse)
 
         update_driver_count(d_id=d_id,
                      d_cartoons_count=poss_cartoons)
@@ -142,7 +149,12 @@ def allocation_division_distribution_points(dataframe: pd.DataFrame) -> pd.DataF
     print(convert_output_table_to_df())
     return pd.concat([filled_df, unfilled_df], ignore_index=True)
 
-
+def merged_output_tables():
+    combined = pd.DataFrame(get_all_rows_output())
+    if rows_exists("output_data_two"):
+        data2 = pd.DataFrame(get_all_rows_output_two())
+        combined = pd.concat([combined, data2], ignore_index=True)
+    return combined
 def export_excel():
     if not REPORTS_DIR_PATH.exists():
         REPORTS_DIR_PATH.mkdir()
@@ -153,9 +165,12 @@ def export_excel():
 
     base_file_path = Path(REPORTS_DIR_PATH, f"distribution_report_{file_number_str}.xlsx")
 
-    data = get_all_rows_output()
+    combined = pd.DataFrame(get_all_rows_output())
+    if rows_exists("output_data_two"):
+        data2 = pd.DataFrame(get_all_rows_output_two())
+        combined = pd.concat([combined, data2], ignore_index=True)
 
-    dataframe = pd.DataFrame(data)
+    dataframe = pd.DataFrame(combined)
 
     dataframe.to_excel(base_file_path, index=False)
     return base_file_path

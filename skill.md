@@ -18,7 +18,11 @@
  there will be option to select only one point from today points to change his driver with
  update_day_point(d_id,day:get_current_day(),point) function from
  d_dal_points, after selection will pop up a list of all drivers each one with his name and id with get_drivers_name_ids() from c_dal_drivers.py,
-- and don't forget to handle the confirmation with a confirmation button for each selection and status request details as message. 
+- and don't forget to handle the confirmation with a confirmation button for each selection and status request details as message.
+- last button before the first tab beside the previous button, put a 2 options button one for setting
+ all driver count in driver table back to 0 with the function reset_cartoons_count() from
+ 'c_dal_drivers.py'. and second option will be to refresh output_table_two with the function
+ refresh_output_table_data() from 'eb_router_output_table_two.py'.
 - first tab will be for the cartoons counting.
 - second tab will handle the final file download.
 - third tab will have a several functions to manage our db. 
@@ -45,9 +49,6 @@ with his purpose below.
 - It will show for each store number a row in the landing page, in this row should be 2 cell to fill,
  one for cartoons_count(integer)  and one for bags_count(integer). 
 
-- for each store_number row with 2 cells mentioned before will be a confirmation button,to confirm the row and update
- the existing row count in table with function update_output_count_driver_null(st_number:(store_number),count:(count of bags+count of cartoons))
- from 'e_dal_output_table.py'
 - if not all cells filled with values, the 'confirm and continue' button of
  all cells in the bottom need to be unable to click, if the user try to click should be shown an error message and redirect in the tab
  to the empty cell and in the message write "you must fill all cells if no cartoons left fill with 0."  
@@ -69,9 +70,10 @@ with his purpose below.
 ### Second Tab:
 - will be shown Dataframe that represented the output_table to see the result of the first tab(counting),
  with function convert_output_table_to_df() from 'f_functions.py'. 
-- after the DataFrame will be 2 buttons side by side:
-- - first button will be used for downloading the file as Excel with function export_excel() from 'f_functions.py'.
-- - second button will be used to auto print the last modified file with the function print_last_report() from 'f_functions.py'. 
+- after the DataFrame will be 1 button under the center of the DataFrame,
+ the button will be used for downloading the file as Excel with function
+ export_excel() from 'f_functions.py',
+ 
 
 ### Third Tab:
 - will show 1 option button, the user can decide what router functions to use from list of the routers.
@@ -85,11 +87,11 @@ with his purpose below.
 - every function should inform the user about error/success with details after the confirm button will be clicked. 
 
 
-- the function from e_dal_output_table.py: update_output_point_driver_id(st_number:float,driver_id:int) need to have a unique button,
+- the function from 'eb_router_output_table.py': patch_output_two_data(output_number,output_data:PatchOutputData) need to have a unique button,
  if this button clicked will pop up an input cell to be filled by the user with instruction of data reception by the function requires.
- also will be shown for this function DataFrame from get_all_rows_output() in 'e_dal_output_table.py'.
- after he clicked the confirmation button you should use the function get_all_rows_output from 'e_dal_output_table.py'
- and refresh the DataFrame,
+ also will be shown for this function merged DataFrame from merged_output_tables() in 'f_functions.py'.
+ after he clicked the confirmation button you should use the function merged_output_tables() in
+'f_functions.py', and refresh the DataFrame,
  
 
 - from a_router_store.py -> functions: insert_store(store: Store),patch_store(store_number:int,update_store: StoreUpdate),delete_existing_store(store_number: int).
@@ -98,7 +100,11 @@ with his purpose below.
 - from d_router_points.py -> functions: insert_point(p:Point),update_day_point(p:UpdatePoint),delete_point(day:str,point:int).
 - from e_router_output_table.py -> functions: get_output_data(),insert_new_output_row(output_data:OutputData),patch_output_data(output_number,output_data:PatchOutputData),
  delete_output_data_by_number(output_number:int), refresh_output_table_data().
+- from eb_router_output_table_two.py -> functions: patch_output_data(output_number,output_data:PatchOutputData),refresh_output_table_data()
 
+### Specials:
+- make upgrade for main_page to run the delivery app in public server.
+- make the delivery app also adjusted for mobile phones.
 
 
 
