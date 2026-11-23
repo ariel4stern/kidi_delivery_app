@@ -8,9 +8,11 @@ from e_dal_output_table import (
     get_all_rows_output,
     get_row_output,
     insert_row_output,
+    update_output_point_driver_id,
     patch_output_row,
     delete_row_output,
-    delete_output_table
+    delete_output_table,
+    initialize_output_table
 )
 
 output_router = APIRouter(
@@ -64,6 +66,19 @@ def insert_new_output_row(output_data:OutputData):
         'inserted_row': inserted
     }
 
+@output_router.put("/{output_number}")
+def update_output_data_by_number(output_number:float,output_driver_id:int):
+    updated_row = get_row_output(output_number)
+    if updated_row is None:
+        raise HTTPException(status_code=404, detail="No output row found.")
+    updated_driver = update_output_data_by_number(output_number,output_driver_id)
+    if updated_driver is None:
+        raise HTTPException(status_code=404, detail="Output driver failed to update.")
+    return {
+        'status':"Success",
+        'updated_row': updated_row
+    }
+
 @output_router.patch("/patch/{output_number}")
 def patch_output_data(output_number,output_data:PatchOutputData):
     patched_row = patch_output_row(store_number=output_number,
@@ -99,10 +114,13 @@ def delete_output_data_by_number(output_number:int):
     }
 
 @output_router.delete("/delete/table")
-def delete_output_data_by_number():
+def refresh_output_table_data():
     deleted_table = delete_output_table()
     if not deleted_table:
         raise HTTPException(status_code=404, detail="No output row found.")
+
+    if not initialize_output_table():
+        raise HTTPException(status_code=404, detail="Output table failed to initialize.")
 
     return {
         'status':"Success",

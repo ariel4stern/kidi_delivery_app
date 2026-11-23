@@ -1,5 +1,5 @@
 from fastapi import APIRouter,HTTPException
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel,Field
 from b_dal_delivery import (
     initialize_delivery_table,
@@ -17,8 +17,8 @@ delivery_router = APIRouter(
 
 class PatchDistributionLine(BaseModel):
     day: str = Field(...,min_length=1,max_length=10)
-    stores_numbers: List[int] = Field([],min_length=1)
-    distribution_areas: List[str] = Field([],min_length=1)
+    stores_numbers: Optional[List[int]] = Field([],min_length=1)
+    distribution_areas: Optional[List[str]] = Field([],min_length=1)
 
 @delivery_router.get('/')
 def get_all_distribution_line():
@@ -27,7 +27,6 @@ def get_all_distribution_line():
         raise HTTPException(status_code=404,detail='Distribution lines Table not found.')
     return {'status': 'Success',
             'distribution lines': dist_table}
-
 @delivery_router.get('/{day}')
 def get_delivery(day:str):
     dist_line = get_distribution_line(day)

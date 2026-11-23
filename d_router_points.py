@@ -65,7 +65,7 @@ def insert_point(p:Point):
     }
 
 @point_router.put('/day_point/up')
-def update_area(p:UpdatePoint):
+def update_day_point(p:UpdatePoint):
     updated_point = update_day_point(d_id=p.d_id,
                                    day=p.day,
                                    point=p.point)

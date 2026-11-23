@@ -1,0 +1,57 @@
+<!-- Tab 2: Save and Print. Fragment: embedded into the landing page by main_page.py -->
+<section id="tab2" class="panel">
+  <h2>Save and Print</h2>
+  <p class="muted">The result of the counting and allocation (output table).</p>
+
+  <div id="out-table"><p class="muted">Loading&hellip;</p></div>
+
+  <div class="btn-row">
+    <button class="btn" id="btn-download" type="button">Download Excel</button>
+    <button class="btn red" id="btn-print" type="button">Print last report</button>
+    <button class="btn green" id="btn-refresh" type="button">Refresh table</button>
+  </div>
+  <div id="save-msg" class="msg hidden"></div>
+</section>
+
+<script>
+(function () {
+  async function loadTable() {
+    const r = await api('/api/output');
+    $('#out-table').innerHTML = r.ok ? tableHtml(r.data.rows) : '<div class="msg err">' + esc(errText(r)) + '</div>';
+  }
+
+  $('#btn-refresh').addEventListener('click', loadTable);
+  window.addEventListener('output-changed', loadTable);
+
+  $('#btn-download').addEventListener('click', async () => {
+    const msg = $('#save-msg');
+    showMsg(msg, 'info', 'Creating the Excel file\u2026');
+    let res;
+    try { res = await fetch('/api/export'); }
+    catch (e) { showMsg(msg, 'err', 'Network error: ' + e.message); return; }
+    if (!res.ok) {
+      let d = ''; try { d = (await res.json()).detail; } catch (e) {}
+      showMsg(msg, 'err', 'Download failed' + (d ? ': ' + d : ' (HTTP ' + res.status + ')'));
+      return;
+    }
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd);
+    const name = m ? decodeURIComponent(m[1]) : 'distribution_report.xlsx';
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    showMsg(msg, 'ok', 'Report saved: ' + name);
+  });
+
+  $('#btn-print').addEventListener('click', async () => {
+    const msg = $('#save-msg');
+    showMsg(msg, 'info', 'Sending to the printer\u2026');
+    const r = await api('/api/print', { method: 'POST' });
+    showMsg(msg, r.ok ? 'ok' : 'err', r.ok ? (r.data.detail || 'Print job sent.') : errText(r));
+  });
+
+  document.addEventListener('DOMContentLoaded', loadTable);
+})();
+</script>

@@ -30,7 +30,7 @@ def create_table_drivers():
             driver_name TEXT NOT NULL,
             driver_phone TEXT NOT NULL UNIQUE,
             cartoons_count INTEGER NOT NULL DEFAULT 0,
-            max_cartoons_count INTEGER NOT NULL DEFAULT 201,
+            max_cartoons_count INTEGER NOT NULL DEFAULT 110,
             driver_status TEXT NOT NULL DEFAULT 'un_available'
     );'''
     with get_connection() as conn:
@@ -87,7 +87,22 @@ def get_all_drivers() -> List[ Dict[str, Any] ] | None :
         if 'no such table' in str(e):
             return None
         raise
-
+def get_drivers_name_ids() -> List[Dict[str,Any]]|[]:
+    query ='''
+    SELECT driver_id,driver_name FROM drivers;'''
+    with get_connection() as conn:
+        rows = conn.execute(query).fetchall()
+        if not rows:
+            return []
+        return [dict(r) for r in rows]
+def get_drivers_name_ids_status() -> List[Dict[str,Any]]|[]:
+    query ='''
+    SELECT driver_id,driver_name,driver_status FROM drivers;'''
+    with get_connection() as conn:
+        rows = conn.execute(query).fetchall()
+        if not rows:
+            return []
+        return [dict(r) for r in rows]
 def get_cartoons_count(driver_id: int) -> int | None:
     query = '''SELECT cartoons_count FROM drivers WHERE driver_id = ? AND driver_status like "available";'''
     with get_connection() as conn:
@@ -192,16 +207,15 @@ def update_driver_available_not(driver_id:int,able_str:str) -> int :
     return int(row_count)
 def update_driver_count(d_id:int,d_cartoons_count:int) -> int :
     query = '''
-    UPDATE drivers SET driver_count = driver_count + ?
+    UPDATE drivers SET cartoons_count = (cartoons_count + ?)
     WHERE driver_id = ?;'''
     with get_connection() as conn:
-        cursor = conn.execute(query, (d_id,d_cartoons_count))
+        cursor = conn.execute(query, (d_cartoons_count,d_id))
         if cursor.rowcount == 0:
             return 0
         row_count = cursor.rowcount
 
     return int(row_count)
-
 def delete_driver(d_id:int)-> bool:
     query = '''
     DELETE FROM drivers WHERE driver_id = ?;'''

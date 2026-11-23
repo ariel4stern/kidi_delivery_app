@@ -20,7 +20,8 @@ from e_dal_output_table import (
     get_current_day,
     get_all_rows_output,
     update_output_number,
-    update_output_count_driver_null
+    update_output_count_driver_null,
+    clear_output_driver
 )
 
 from e_router_output_table import (
@@ -41,8 +42,12 @@ def counting_confirmation(dataframe: pd.DataFrame):
 
         patched_row = update_output_count_driver_null(st_number=store_number,
                                                       count=store_count)
+
         if patched_row is None:
-            raise ValueError("Not such store number")
+            print(f"Not such store number: {store_number}")
+            return False
+
+    return True
 
 def convert_output_table_to_df():
     rows = get_all_rows_output()
@@ -64,23 +69,27 @@ def approve_driver_count(d_id:int ,count:int ,point:float) -> bool | None :
     cartoons_count_driver = get_cartoons_count(d_id)
 
     max_cartoons_per_driver = get_max_cartoons(d_id)
-
+    print("cartoons_count_driver",cartoons_count_driver)
+    print("max_cartoons_per_driver",max_cartoons_per_driver)
     if max_cartoons_per_driver is None or cartoons_count_driver is None:
         print('Not such driver')
         return None
 
+    print("condition:",max_cartoons_per_driver < (count + cartoons_count_driver))
     if max_cartoons_per_driver < (count + cartoons_count_driver):
+        print("checking_approv")
         poss_cartoons = max_cartoons_per_driver - cartoons_count_driver
 
-        data_output_unuse = OutputData(output_number=point+0.2,
-                                 output_count=count-poss_cartoons,
-                                 driver_id=5)
+        data_output_unuse = OutputData(output_number=point + 0.2,
+                                       output_count=count - poss_cartoons,
+                                       driver_id=None)
 
         insert_new_output_row(data_output_unuse)
 
-        patch_driver(d_id=d_id,
-                     d_cartoons_count=poss_cartoons,
-                     d_name=None, d_phone=None, d_max_cartoons=None, d_status=None)
+        clear_output_driver(point + 0.2, count - poss_cartoons)  # remainder stays NaN
+
+        update_driver_count(d_id=d_id,
+                     d_cartoons_count=poss_cartoons)
 
         update_output_number(st_number=point,
                              count=poss_cartoons,
@@ -90,63 +99,49 @@ def approve_driver_count(d_id:int ,count:int ,point:float) -> bool | None :
         return True
 
     return False
+
 def allocation_division_distribution_points(dataframe: pd.DataFrame) -> pd.DataFrame | None :
-    unfilled_df,filled_df = extract_nan_stores(dataframe)
+    unfilled_df, filled_df = extract_nan_stores(dataframe)
     if unfilled_df is None:
         print('No unfilled data')
         return None
 
     today = str(get_current_day())
 
-    for i in unfilled_df.index :
-
+    for i in unfilled_df.index:
         store_number = int(unfilled_df.loc[i]['store_numbers'])
         store_count = int(unfilled_df.loc[i]['cartoons_count'])
 
-        point = get_dist_point(today,store_number)
-        # {'driver_id': 2, 'driver_name': 'leonid', 'day': 'sunday', 'point': 3}
-        if point is None:
-            print('not such point today')
-            return None
-
-        available_drivers = get_available_drivers()
-        if available_drivers is None:
-            print('all drivers is un_available')
-            return None
+        point = get_dist_point(today, store_number)
+        if point is None or point['driver_id'] is None:
+            print(f'no driver point today for store {store_number}')
+            clear_output_driver(store_number, store_count)
+            continue
 
         driver_id = int(point['driver_id'])
-
-        problem_count = approve_driver_count(d_id=driver_id,
-                                       count=store_count,
-                                       point=store_number)
-
-        if problem_count:
-            #print('approve_driver_count() activated')
-            continue
-
-        available_drivers_ids = [d['driver_id'] for d in available_drivers]
-        if driver_id not in available_drivers_ids:
-            update_output_count_driver_null(st_number = store_number,
-                                            count= store_count)
-
+        available_ids = [d['driver_id'] for d in (get_available_drivers() or [])]
+        print(available_ids)
+        if driver_id not in available_ids:          # un_available -> NaN, always
             print(f'driver {driver_id} not in available drivers')
+            clear_output_driver(store_number, store_count)
             continue
-
-
-
-        to_patch = PatchOutputData(output_count=store_count,
-                                   driver_id=driver_id)
+        approved_driver = approve_driver_count(d_id=driver_id, count=store_count, point=store_number)
+        if approved_driver:
+            print("approved_driver -- checked")
+            continue                                # driver filled up, remainder already NaN
 
         patched_row = patch_output_data(output_number=store_number,
-                                        output_data=to_patch)['updated_row']
+                                        output_data=PatchOutputData(output_count=store_count,
+                                                                    driver_id=driver_id))['updated_row']
+        up = update_driver_count(d_id=driver_id, d_cartoons_count=store_count)
+        print('up driver:',up)
+        unfilled_df.loc[i, "driver_id"] = int(patched_row["driver_id"])
+        unfilled_df.loc[i, "driver_name"] = str(patched_row["driver_name"])
 
-        update_driver_count(d_id=driver_id,d_cartoons_count=store_count)
+    print(pd.concat([filled_df, unfilled_df], ignore_index=True))
+    print(convert_output_table_to_df())
+    return pd.concat([filled_df, unfilled_df], ignore_index=True)
 
-        unfilled_df.loc[i,"driver_id"] = int(patched_row["driver_id"])
-        unfilled_df.loc[i,"driver_name"] = str(patched_row["driver_name"])
-
-    current_df = pd.concat([filled_df,unfilled_df],ignore_index=True)
-    return current_df
 
 def export_excel():
     if not REPORTS_DIR_PATH.exists():
@@ -154,9 +149,9 @@ def export_excel():
 
     files = [f for f in REPORTS_DIR_PATH.iterdir() if f.is_file()]
 
-    file_number_str = len(files)+1
+    file_number_str = len(files) + 1
 
-    base_file_path = Path(REPORTS_DIR_PATH,f"distribution_report_{file_number_str}.xlsx")
+    base_file_path = Path(REPORTS_DIR_PATH, f"distribution_report_{file_number_str}.xlsx")
 
     data = get_all_rows_output()
 
@@ -164,6 +159,20 @@ def export_excel():
 
     dataframe.to_excel(base_file_path, index=False)
     return base_file_path
+
+
+def print_last_report():
+    if not REPORTS_DIR_PATH.exists():
+        print("no reports")
+        return False
+
+    files = [f for f in REPORTS_DIR_PATH.iterdir() if f.is_file()]
+
+    file_number_str = len(files) + 1
+    base_file_path = Path(REPORTS_DIR_PATH, f"distribution_report_{file_number_str}.xlsx")
+
+    os.startfile(base_file_path, "print")
+    return True
 
 df_dict ={'store_numbers': [3,23,30,31],
           'cartoons_count': [120,54,12,72],

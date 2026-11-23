@@ -44,8 +44,8 @@ def create_output_table() -> None :
     CREATE TABLE IF NOT EXISTS output_data (
         store_number REAL PRIMARY KEY,
         store_count INTEGER DEFAULT 0,
-        driver_id INTEGER DEFAULT 5,
-        driver_name TEXT DEFAULT 'nobody',
+        driver_id INTEGER DEFAULT null,
+        driver_name TEXT DEFAULT null,
         
         FOREIGN KEY (driver_id)
         REFERENCES drivers (driver_id)
@@ -190,8 +190,25 @@ def update_output_count_driver_null(st_number:float,count:int) -> Dict[str,Any] 
             return None
 
     return get_row_output(st_number)
-
-
+def update_output_point_driver_id(st_number:float,driver_id:int) -> Dict[str,Any] | None:
+    query = '''
+    UPDATE output_data SET 
+            driver_id = ?
+            WHERE store_number = ?'''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (driver_id,st_number))
+        if cursor.rowcount == 0:
+            return None
+    return get_row_output(st_number)
+def clear_output_driver(st_number:float, count:int) -> Dict[str,Any] | None:
+    query = '''
+    UPDATE output_data SET store_count = ?, driver_id = NULL, driver_name = NULL
+    WHERE store_number = ?'''
+    with get_connection() as conn:
+        cursor = conn.execute(query, (count, st_number))
+        if cursor.rowcount == 0:
+            return None
+    return get_row_output(st_number)
 
 def delete_row_output(store_number:float) -> bool :
     query = '''
@@ -206,6 +223,7 @@ def delete_output_table()-> bool :
     with get_connection() as conn:
         cursor = conn.execute(query)
         return cursor.rowcount > 0
+
 
 
 

@@ -51,8 +51,8 @@ def insert_existing_distribution_lines() -> int :
             ['ירושלים','בית_שמש','ביתר'],
             ['צפון','מודיעין'],
             ['בני_ברק','דרום'],
-            ['ירושלים','בית_שמש','ביתר'],
-            ['בני_ברק','דרום','צפון','מודיעין'],
+            ['ירושלים','בית_שמש','ביתר','מודיעין'],
+            ['בני_ברק','דרום','צפון'],
             [],
             []]
 
@@ -137,8 +137,8 @@ def get_today_store_numbers(day:str) -> List[Any] | None :
         today_numbers = list(result['stores_numbers'])
         return today_numbers
 
-def patch_distribution_line(day:str, stores_numbers_l:List[int],
-            distribution_area_l:List[str]) -> Dict[str, List[str] | List[int]] | int | None :
+def patch_distribution_line(day:str, stores_numbers_l,
+            distribution_area_l) -> Dict[str, List[str] | List[int]] | int | None :
 
     if all(not x for x in [stores_numbers_l, distribution_area_l]):
         return 0
