@@ -27,7 +27,7 @@ class OutputDataTwo(BaseModel):
     output_count : int = Field(...,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
 
-class PatchOutputData(BaseModel):
+class PatchOutputDataTwo(BaseModel):
     output_count : Optional[int] = Field(None,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
 
@@ -87,22 +87,22 @@ def update_output_data_two_by_number(output_number:float,up_driver_id:UpdateOutp
     }
 
 @output_two_router.patch("/patch/{output_number}")
-def patch_output_two_data(output_number,output_data:PatchOutputData):
-    patched_row = patch_output_row_two(store_number=output_number,
+def patch_output_two_data(output_number:int,output_data:PatchOutputDataTwo):
+    patched_row_two = patch_output_row_two(store_number=output_number,
                                    store_count=output_data.output_count,
                                    driver_id=output_data.driver_id)
-    if patched_row == 0:
+    if patched_row_two == 0:
         raise HTTPException(status_code=404, detail="parameters provided Wrong.")
 
-    if patched_row == 1:
+    if patched_row_two == 1:
         raise HTTPException(status_code=404, detail="Not such row in output table.")
 
-    if patched_row == 2:
+    if patched_row_two == 2:
         raise HTTPException(status_code=404, detail="Row failed to patch.")
 
     return {
         'status':"Success",
-        'updated_row': patched_row
+        'updated_row': patched_row_two
     }
 
 @output_two_router.delete("/delete/table")

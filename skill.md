@@ -19,10 +19,12 @@
  update_day_point(d_id,day:get_current_day(),point) function from
  d_dal_points, after selection will pop up a list of all drivers each one with his name and id with get_drivers_name_ids() from c_dal_drivers.py,
 - and don't forget to handle the confirmation with a confirmation button for each selection and status request details as message.
-- last button before the first tab beside the previous button, put a 2 options button one for setting
+- last button before the first tab beside the previous button, put a 3 options button one for setting
  all driver count in driver table back to 0 with the function reset_cartoons_count() from
- 'c_dal_drivers.py'. and second option will be to refresh output_table_two with the function
- refresh_output_table_data() from 'eb_router_output_table_two.py'.
+ 'c_dal_drivers.py'. second option will be to refresh output_table_two with the function
+ refresh_output_table_data() from 'eb_router_output_table_two.py'. the last option should be refresh output_table
+ with function:refresh_output_table_data() from e_router_output_table.
+
 - first tab will be for the cartoons counting.
 - second tab will handle the final file download.
 - third tab will have a several functions to manage our db. 
@@ -64,15 +66,20 @@ with his purpose below.
  from the function convert_output_table_to_df() from 'f_functions.py'.
 - If the function counting_confirmation() return False you should pop up a red error message to inform to user, what he was wrong in his steps.
 - after the allocation from the confirmation you should pop up a green success message to the user,
- it will say to user: 'Success You allow to move on',
- and then all cells will be unable to interact.
+ it will say to user: 'Success You allow to move on', in f_functions.py I added a new function
+ insert_to_output_two_all_null() this function should be activated after,
+ the confirmation and continue in tab1,all NAN value inserted to output_two table,
+  also the DataFrame represented after the confirm and continue should include output_table_two and
+ output_table to show all detailed and to be ready to download as Excel, with merged_output_tables()
+ function from f_functions.py, and then all cells will be unable to interact.
 
 ### Second Tab:
 - will be shown Dataframe that represented the output_table to see the result of the first tab(counting),
  with function convert_output_table_to_df() from 'f_functions.py'. 
-- after the DataFrame will be 1 button under the center of the DataFrame,
- the button will be used for downloading the file as Excel with function
- export_excel() from 'f_functions.py',
+- after the DataFrame will be 2 buttons under the center of the DataFrame,
+ the first button will be used for downloading the file as Excel with function
+ export_excel() from 'f_functions.py', the second will be for refreshing the DataFrame with the function:
+ merged_output_tables() from f_functions.py.
  
 
 ### Third Tab:
@@ -87,8 +94,12 @@ with his purpose below.
 - every function should inform the user about error/success with details after the confirm button will be clicked. 
 
 
-- the function from 'eb_router_output_table.py': patch_output_two_data(output_number,output_data:PatchOutputData) need to have a unique button,
- if this button clicked will pop up an input cell to be filled by the user with instruction of data reception by the function requires.
+- the function from 'eb_router_output_table.py': patch_output_two_data(output_number:int,output_data:PatchOutputDataTwo)
+ need to have a unique button, if this button clicked will pop up an input cell to be filled by the user with instruction
+ of data reception by the function requires but pay attention in the PatchOutputDataTwo fields leave only the
+ output_number and driver_id number from PatchOutputDataTwo the store count will stay in db as it was before.
+ The DataFrame details under this unique function must be relevant, use the function merged_output_tables() from 'f_funtions.py',
+ After any change refresh this DataFrame with this function merged_output_tables().
  also will be shown for this function merged DataFrame from merged_output_tables() in 'f_functions.py'.
  after he clicked the confirmation button you should use the function merged_output_tables() in
 'f_functions.py', and refresh the DataFrame,
@@ -105,7 +116,8 @@ with his purpose below.
 ### Specials:
 - make upgrade for main_page to run the delivery app in public server.
 - make the delivery app also adjusted for mobile phones.
-
+- remove the bug after confirm of tab3 here is error: AttributeError: module 'eb_router_output_table_two' has no attribute 'PatchOutputData'
+ find the bug in the code and let me know what to change in it.
 
 
 

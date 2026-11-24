@@ -1,0 +1,255 @@
+<!-- Toolbar (before the first tab) + Tab 1: Cartoons Counting. Fragment: embedded into the landing page by main_page.py -->
+<section id="toolbar" class="toolbar">
+  <button class="btn" id="btn-drivers" type="button">Drivers availability</button>
+  <button class="btn red" id="btn-point" type="button">Change driver for a point</button>
+  <button class="btn green" id="btn-maint" type="button">Reset counts / Refresh output two</button>
+  <div id="toolbar-msg" class="msg hidden"></div>
+</section>
+
+<section id="tab1" class="panel">
+  <h2>Cartoons Counting</h2>
+  <p class="muted">Fill the cartoons and the bags for every store. If no cartoons are left, fill with 0.</p>
+
+  <div id="count-list" class="count-list"><p class="muted">Loading stores&hellip;</p></div>
+
+  <div class="finish-bar">
+    <button class="btn green" id="finish-btn" type="button" aria-disabled="true">Confirm and continue</button>
+  </div>
+  <div id="count-msg" class="msg hidden"></div>
+</section>
+
+<script>
+(function () {
+  const DONE_KEY = 'countDone';
+  let rows = [];
+
+  const isNum = v => /^\d+$/.test(String(v).trim());
+  const rowEls = () => $$('#count-list .count-row');
+  const rowValid = el => isNum($('.in-cartoons', el).value) && isNum($('.in-bags', el).value);
+  const allValid = () => rowEls().length > 0 && rowEls().every(rowValid);
+
+  function refreshFinish() {
+    $('#finish-btn').setAttribute('aria-disabled', allValid() ? 'false' : 'true');
+  }
+
+  function lock(on) {
+    $$('#count-list input, #count-list button').forEach(e => e.disabled = on);
+    $('#finish-btn').disabled = on;
+  }
+
+  function render() {
+    const box = $('#count-list');
+    if (!rows.length) { box.innerHTML = '<p class="muted">No stores found in the output table.</p>'; refreshFinish(); return; }
+    box.innerHTML = rows.map(r => '<div class="count-row" data-store="' + esc(r.store_number) + '">' +
+      '<div class="store">Store <b>' + esc(r.store_number) + '</b></div>' +
+      '<label>Cartoons <input class="in-cartoons" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>' +
+      '<label>Bags <input class="in-bags" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>' +
+      '<button class="btn small row-confirm" type="button">Confirm row</button>' +
+      '<span class="row-state"></span></div>').join('');
+    refreshFinish();
+    if (sessionStorage.getItem(DONE_KEY)) {
+      lock(true);
+      showMsg($('#count-msg'), 'ok', 'Counting was already confirmed. Cells are locked.');
+    }
+  }
+
+  async function load() {
+    const r = await api('/api/rows');
+    if (!r.ok) { showMsg($('#count-msg'), 'err', errText(r)); return; }
+    rows = (r.data.rows || []).filter(x => Number.isInteger(Number(x.store_number)));
+    render();
+  }
+
+  /* ---- row interaction ---- */
+  $('#count-list').addEventListener('input', e => {
+    const row = e.target.closest('.count-row');
+    if (!row) return;
+    row.classList.remove('confirmed', 'missing');
+    $('.row-state', row).textContent = '';
+    refreshFinish();
+  });
+
+  $('#count-list').addEventListener('click', async e => {
+    const btn = e.target.closest('.row-confirm');
+    if (!btn) return;
+    const row = btn.closest('.count-row');
+    const msg = $('#count-msg');
+    if (!rowValid(row)) {
+      row.classList.add('missing');
+      showMsg(msg, 'err', 'you must fill all cells if no cartoons left fill with 0.');
+      return;
+    }
+    const cartoons = parseInt($('.in-cartoons', row).value, 10);
+    const bags = parseInt($('.in-bags', row).value, 10);
+    setBusy(btn, true);
+    const r = await api('/api/counting/row', { json: { store_number: parseInt(row.dataset.store, 10), cartoons, bags } });
+    setBusy(btn, false);
+    if (r.ok) {
+      row.classList.add('confirmed');
+      $('.row-state', row).textContent = '\u2714 saved (total ' + (cartoons + bags) + ')';
+      showMsg(msg, '', '');
+    } else {
+      showMsg(msg, 'err', errText(r));
+    }
+  });
+
+  /* ---- confirm and continue ---- */
+  $('#finish-btn').addEventListener('click', async () => {
+    const msg = $('#count-msg');
+    if (!allValid()) {
+      const first = rowEls().find(el => !rowValid(el));
+      rowEls().forEach(el => el.classList.toggle('missing', !rowValid(el)));
+      showMsg(msg, 'err', 'you must fill all cells if no cartoons left fill with 0.');
+      if (first) {
+        first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const empty = [$('.in-cartoons', first), $('.in-bags', first)].find(i => !isNum(i.value));
+        if (empty) setTimeout(() => empty.focus({ preventScroll: true }), 350);
+      }
+      return;
+    }
+    const payload = rowEls().map(el => ({
+      store_number: parseInt(el.dataset.store, 10),
+      cartoons: parseInt($('.in-cartoons', el).value, 10),
+      bags: parseInt($('.in-bags', el).value, 10)
+    }));
+    setBusy($('#finish-btn'), true);
+    showMsg(msg, 'info', 'Counting and allocating drivers\u2026');
+    const r = await api('/api/counting/finish', { json: { rows: payload } });
+    if (r.ok) {
+      showMsg(msg, 'ok', r.data.detail || 'Success You allow to move on');
+      sessionStorage.setItem(DONE_KEY, '1');
+      lock(true);
+      window.dispatchEvent(new Event('output-changed'));
+    } else {
+      setBusy($('#finish-btn'), false);
+      showMsg(msg, 'err', errText(r));
+    }
+  });
+
+  /* tab 3 "refresh output table" (e_router_output_table) unlocks a new counting round */
+  window.addEventListener('counting-reset', () => { sessionStorage.removeItem(DONE_KEY); showMsg($('#count-msg'), '', ''); load(); });
+
+  /* ---------------- toolbar 1: drivers availability ---------------- */
+  $('#btn-drivers').addEventListener('click', async () => {
+    const m = openModal('Drivers availability',
+      '<p class="muted">Tick the drivers to switch to <b>available</b>, then confirm.</p>' +
+      '<div class="pick-list" id="drv-list">Loading&hellip;</div>' +
+      '<div class="msg hidden" id="drv-msg"></div>' +
+      '<div class="modal-actions"><button class="btn green" id="drv-confirm" type="button">Confirm</button></div>');
+    const list = $('#drv-list', m.el), msg = $('#drv-msg', m.el);
+
+    async function loadDrivers() {
+      const r = await api('/api/drivers/status');
+      if (!r.ok) { list.textContent = errText(r); return; }
+      const ds = r.data.drivers || [];
+      list.innerHTML = ds.length ? ds.map(d => {
+        const av = d.driver_status === 'available';
+        return '<label class="pick"><input type="checkbox" value="' + esc(d.driver_id) + '"' + (av ? ' checked disabled' : '') + '>' +
+          '<b>' + esc(d.driver_name) + '</b><span class="muted">#' + esc(d.driver_id) + '</span>' +
+          '<span class="badge ' + (av ? 'ok' : 'off') + '">' + esc(d.driver_status) + '</span></label>';
+      }).join('') : '<p class="muted">No drivers found.</p>';
+    }
+    await loadDrivers();
+
+    $('#drv-confirm', m.el).onclick = async () => {
+      const ids = $$('input[type=checkbox]:checked:not(:disabled)', list).map(i => parseInt(i.value, 10));
+      if (!ids.length) { showMsg(msg, 'err', 'Select at least one driver that is not available yet.'); return; }
+      const btn = $('#drv-confirm', m.el);
+      setBusy(btn, true);
+      const r = await api('/api/drivers/set_available', { json: { driver_ids: ids } });
+      setBusy(btn, false);
+      if (r.ok) {
+        showMsg(msg, 'ok', r.data.detail);
+        showMsg($('#toolbar-msg'), 'ok', r.data.detail);
+        loadDrivers();
+      } else showMsg(msg, 'err', errText(r));
+    };
+  });
+
+  /* ---------------- toolbar 2: change driver for a point (step 1: point, step 2: driver) ---------------- */
+  $('#btn-point').addEventListener('click', () => {
+    const m = openModal('Change driver for a point',
+      '<div id="pt-body"><p class="muted">Loading&hellip;</p></div><div class="msg hidden" id="pt-msg"></div>');
+    const body = $('#pt-body', m.el), msg = $('#pt-msg', m.el);
+    let points = [], chosenPoint = null;
+
+    async function stepPoint(notice) {
+      const r = await api('/api/points/today');
+      if (!r.ok) { body.innerHTML = ''; showMsg(msg, 'err', errText(r)); return; }
+      points = r.data.points || [];
+      body.innerHTML = '<p class="muted">Today: ' + esc(r.data.day) + ' \u2013 ' + points.length + ' point(s)</p>' +
+        '<b>1. Choose one point</b><div class="pick-list">' +
+        (points.length ? points.map(x => '<label class="pick"><input type="radio" name="pt" value="' + esc(x.point) + '">' +
+          '<b>Point ' + esc(x.point) + '</b><span class="badge ' + (x.driver_name ? 'ok' : 'off') + '">' +
+          esc(x.driver_name || 'no driver') + '</span></label>').join('')
+          : '<p class="muted">No points for today.</p>') +
+        '</div><div class="modal-actions"><button class="btn green" id="pt-next" type="button"' +
+        (points.length ? '' : ' disabled') + '>Confirm point</button></div>';
+      showMsg(msg, notice ? 'ok' : '', notice || '');
+      $('#pt-next', body).onclick = () => {
+        const c = $('input[name=pt]:checked', body);
+        if (!c) { showMsg(msg, 'err', 'Select one point first.'); return; }
+        chosenPoint = parseInt(c.value, 10);
+        stepDriver();
+      };
+    }
+
+    async function stepDriver() {
+      showMsg(msg, '', '');
+      const r = await api('/api/drivers/names');
+      if (!r.ok) { showMsg(msg, 'err', errText(r)); return; }
+      const drivers = r.data.drivers || [];
+      const pt = points.find(x => Number(x.point) === chosenPoint);
+      body.innerHTML = '<p class="muted">Point <b>' + esc(chosenPoint) + '</b> \u2013 current driver: ' +
+        esc(pt && pt.driver_name || 'no driver') + '</p><b>2. Choose the new driver</b><div class="pick-list">' +
+        (drivers.length ? drivers.map(x => '<label class="pick"><input type="radio" name="dv" value="' + esc(x.driver_id) + '">' +
+          '<b>' + esc(x.driver_name) + '</b><span class="muted">#' + esc(x.driver_id) + '</span></label>').join('')
+          : '<p class="muted">No drivers found.</p>') +
+        '</div><div class="modal-actions"><button class="btn" id="pt-back" type="button">Back</button>' +
+        '<button class="btn green" id="pt-confirm" type="button">Confirm driver</button></div>';
+      $('#pt-back', body).onclick = () => stepPoint();
+      $('#pt-confirm', body).onclick = async () => {
+        const c = $('input[name=dv]:checked', body);
+        if (!c) { showMsg(msg, 'err', 'Select one driver first.'); return; }
+        const btn = $('#pt-confirm', body);
+        setBusy(btn, true);
+        const res = await api('/api/points/change_driver', { json: { point: chosenPoint, driver_id: parseInt(c.value, 10) } });
+        setBusy(btn, false);
+        if (res.ok) {
+          showMsg($('#toolbar-msg'), 'ok', res.data.detail);
+          stepPoint(res.data.detail);
+        } else showMsg(msg, 'err', errText(res));
+      };
+    }
+    stepPoint();
+  });
+
+  /* ---------------- toolbar 3: two options (reset drivers counts / refresh output_table_two) ---------------- */
+  $('#btn-maint').addEventListener('click', () => {
+    const m = openModal('Reset counts / Refresh output two',
+      '<p class="muted">Choose one option, then confirm.</p>' +
+      '<div class="pick-list">' +
+      '<label class="pick"><input type="radio" name="mt" value="reset_counts"><span><b>Reset drivers counts</b><br>' +
+      '<span class="muted">Set the cartoons count of every driver back to 0.</span></span></label>' +
+      '<label class="pick"><input type="radio" name="mt" value="refresh_output_two"><span><b>Refresh output_table_two</b><br>' +
+      '<span class="muted">Delete all rows of output_data_two.</span></span></label></div>' +
+      '<div class="msg hidden" id="mt-msg"></div>' +
+      '<div class="modal-actions"><button class="btn green" id="mt-confirm" type="button">Confirm</button></div>');
+    const msg = $('#mt-msg', m.el), btn = $('#mt-confirm', m.el);
+    btn.onclick = async () => {
+      const c = $('input[name=mt]:checked', m.el);
+      if (!c) { showMsg(msg, 'err', 'Select one option first.'); return; }
+      setBusy(btn, true);
+      const r = await api('/api/maintenance/' + c.value, { method: 'POST' });
+      setBusy(btn, false);
+      if (r.ok) {
+        showMsg(msg, 'ok', r.data.detail);
+        showMsg($('#toolbar-msg'), 'ok', r.data.detail);
+        if (c.value === 'refresh_output_two') window.dispatchEvent(new Event('output-changed'));
+      } else showMsg(msg, 'err', errText(r));
+    };
+  });
+
+  document.addEventListener('DOMContentLoaded', load);
+})();
+</script>

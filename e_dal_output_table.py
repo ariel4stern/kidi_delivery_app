@@ -223,6 +223,16 @@ def delete_output_table()-> bool :
     with get_connection() as conn:
         cursor = conn.execute(query)
         return cursor.rowcount > 0
+def refresh_output_table() -> bool:
+    query = '''
+    UPDATE output_data SET
+        store_count = 0,
+        driver_id = NULL,
+        driver_name = NULL;
+    '''
+    with get_connection() as conn:
+        cursor = conn.execute(query)
+        return cursor.rowcount > 0
 
 
 

@@ -33,11 +33,15 @@ from e_router_output_table import (
 )
 from eb_router_output_table_two import (
     OutputDataTwo,
+    PatchOutputDataTwo,
     UpdateOutputDataId,
     update_output_data_two_by_number,
-    insert_new_output_two_row,
-    get_all_rows_output_two
-
+    insert_new_output_two_row
+)
+from eb_dal_output_table_two import (
+    get_all_rows_output_two,
+    get_row_output_two,
+    insert_row_output_two
 )
 
 BASE_DIR = os.getcwd()
@@ -132,6 +136,7 @@ def allocation_division_distribution_points(dataframe: pd.DataFrame) -> pd.DataF
             print(f'driver {driver_id} not in available drivers')
             clear_output_driver(store_number, store_count)
             continue
+
         approved_driver = approve_driver_count(d_id=driver_id, count=store_count, point=store_number)
         if approved_driver:
             print("approved_driver -- checked")
@@ -150,11 +155,24 @@ def allocation_division_distribution_points(dataframe: pd.DataFrame) -> pd.DataF
     return pd.concat([filled_df, unfilled_df], ignore_index=True)
 
 def merged_output_tables():
-    combined = pd.DataFrame(get_all_rows_output())
-    if rows_exists("output_data_two"):
-        data2 = pd.DataFrame(get_all_rows_output_two())
-        combined = pd.concat([combined, data2], ignore_index=True)
-    return combined
+    """output_data + output_data_two as one DataFrame (column 'source' tells where each row came from).
+    A store that has no driver in output_data and was moved to output_data_two is shown only once."""
+    data1 = pd.DataFrame(get_all_rows_output() or [])
+    data2 = pd.DataFrame(get_all_rows_output_two() or []) if rows_exists("output_data_two") else pd.DataFrame()
+
+    if not data1.empty and not data2.empty:
+        moved = data1['driver_id'].isna() & data1['store_number'].isin(data2['store_number'])
+        data1 = data1[~moved]
+
+    if not data1.empty:
+        data1.insert(0, 'source', 'output_data')
+    if not data2.empty:
+        data2.insert(0, 'source', 'output_data_two')
+
+    combined = pd.concat([d for d in (data1, data2) if not d.empty], ignore_index=True)
+    if combined.empty:
+        return combined
+    return combined.sort_values(by=['store_number', 'source'], kind='stable').reset_index(drop=True)
 def export_excel():
     if not REPORTS_DIR_PATH.exists():
         REPORTS_DIR_PATH.mkdir()
@@ -165,29 +183,40 @@ def export_excel():
 
     base_file_path = Path(REPORTS_DIR_PATH, f"distribution_report_{file_number_str}.xlsx")
 
-    combined = pd.DataFrame(get_all_rows_output())
-    if rows_exists("output_data_two"):
-        data2 = pd.DataFrame(get_all_rows_output_two())
-        combined = pd.concat([combined, data2], ignore_index=True)
-
-    dataframe = pd.DataFrame(combined)
+    dataframe = merged_output_tables()
+    dataframe = dataframe.sort_values(by=['driver_name','store_count'],na_position='last',ignore_index=True)
 
     dataframe.to_excel(base_file_path, index=False)
     return base_file_path
 
+def insert_to_output_two_all_null() -> int | None :
+    """Runs after 'confirm and continue' (counting + allocation).
+    Every output_data row that still has no driver (driver_id NULL) is inserted into output_data_two.
+    Returns how many rows were inserted (None when output_data is empty)."""
+    rows = get_all_rows_output()
+    if not rows:
+        return None
 
-def print_last_report():
-    if not REPORTS_DIR_PATH.exists():
-        print("no reports")
-        return False
+    dataframe = pd.DataFrame(rows)          # columns: store_number, store_count, driver_id, driver_name
+    nan_values = (dataframe[dataframe['driver_id'].isna()]
+                  .sort_values(by=['store_count'], ascending=False)
+                  .reset_index(drop=True))
 
-    files = [f for f in REPORTS_DIR_PATH.iterdir() if f.is_file()]
+    inserted = 0
+    for i in nan_values.index:
+        st_number = float(nan_values.loc[i, 'store_number'])
+        count = int(nan_values.loc[i, 'store_count'])
 
-    file_number_str = len(files) + 1
-    base_file_path = Path(REPORTS_DIR_PATH, f"distribution_report_{file_number_str}.xlsx")
+        if get_row_output_two(st_number) is not None:   # already there (e.g. confirm pressed twice)
+            continue
 
-    os.startfile(base_file_path, "print")
-    return True
+        result = insert_row_output_two(store_number=st_number, store_count=count, driver_id=None)
+        if isinstance(result, dict):
+            inserted += 1
+        else:
+            print(f'store {st_number} was not inserted to output_data_two (code {result})')
+    return inserted
+
 
 df_dict ={'store_numbers': [3,23,30,31],
           'cartoons_count': [120,54,12,72],
