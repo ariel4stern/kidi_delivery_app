@@ -117,7 +117,13 @@ with his purpose below.
 - make upgrade for main_page to run the delivery app in public server.
 - make the delivery app also adjusted for mobile phones.
 - remove the bug after confirm of tab3 here is error: AttributeError: module 'eb_router_output_table_two' has no attribute 'PatchOutputData'
- find the bug in the code and let me know what to change in it.
+ find the bug in the code and let me know what to change in it. 
+
+follow the instructions from skill.md pay attention to the Specials in the bottom of the page its very relevant,
+look at the HTML pages and css/js files look for bugs and let me know how to fix,
+if page require changes make the changes and send available version to download,
+most important: 4 HTML pages, 1 style.css,1 common.js, and one main_page to manage all the db and routers and HTML pages.
+make the welcome design as the tabs design. there is problem in tab3 in unique function ad write in skill.md files
 
 
 
