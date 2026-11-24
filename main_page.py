@@ -292,11 +292,24 @@ def api_reset_counts():
     return {"detail": f"Cartoons count was reset to 0 for {n} driver(s)."}
 
 
-@app.post("/api/maintenance/refresh_output_two")
-def api_refresh_output_two():
+@app.post("/api/maintenance/refresh_output")
+def api_refresh_output():
     """Toolbar option 2: refresh_output_table_data() from eb_router_output_table_two.py."""
     try:
-        r_out2.refresh_output_table_data()
+        r_out.refresh_output_table_data()
+    except HTTPException as e:
+        if e.status_code == 404:   # the router raises 404 when there was nothing to delete
+            return {"detail": "output_data_two was already empty. Nothing to refresh."}
+        raise
+    except sqlite3.Error as e:
+        raise HTTPException(400, f"Database error: {e}")
+    return {"detail": "output_data_two was refreshed (all rows deleted)."}
+
+@app.post("/api/maintenance/refresh_output_two")
+def api_refresh_output_two():
+    """Toolbar option 2: refresh_output_table_data_two() from eb_router_output_table_two.py."""
+    try:
+        r_out2.refresh_output_table_data_two()
     except HTTPException as e:
         if e.status_code == 404:   # the router raises 404 when there was nothing to delete
             return {"detail": "output_data_two was already empty. Nothing to refresh."}
@@ -330,12 +343,12 @@ def _patch_two(x: dict):
     number = _no(x)
     if x.get("driver_id") is None:
         raise HTTPException(400, "'driver_id' is required.")
-    return r_out2.patch_output_two_data(number, r_out2.PatchOutputData(output_count=None,
+    return r_out2.patch_output_two_data(number, r_out2.PatchOutputDataTwo(output_count=None,
                                                                        driver_id=x["driver_id"]))
 
 
-R_STORE, R_DELIV, R_DRV, R_PTS = "a_router_store.py", "b_router_delivery.py", "c_router_drivers.py", "d_router_points.py"
-R_OUT, R_OUT2 = "e_router_output_table.py", "eb_router_output_table_two.py"
+R_STORE, R_DELIV, R_DRV, R_PTS = "a_router_store", "b_router_delivery", "c_router_drivers", "d_router_points"
+R_OUT, R_OUT2 = "e_router_output_table", "eb_router_output_table_two"
 
 REG = {  # router file -> function -> (JSON template, caller)
     R_STORE: {
@@ -383,7 +396,7 @@ REG = {  # router file -> function -> (JSON template, caller)
         # "patch_output_two_data" has its own button in Tab 3 (hidden from the function list)
         # output_count is not asked from the user: it is always sent as null (None) from here
         "patch_output_two_data": ({"output_number": 3, "driver_id": 1}, lambda x: _patch_two(x)),
-        "refresh_output_table_data": ({}, lambda x: r_out2.refresh_output_table_data()),
+        "refresh_output_table_data_two": ({}, lambda x: r_out2.refresh_output_table_data_two()),
     },
 }
 
@@ -405,6 +418,9 @@ def manage_registry():
 @app.post("/api/manage/{router}/{func}")
 def manage_call(router: str, func: str, body: dict = Body(default={})):
     print(router)
+    if router.endswith(".py"):
+        router = router[:-3]
+    print(router)
     spec = REG.get(router, {}).get(func)
     if spec is None:
         raise HTTPException(404, "Unknown router/function.")
@@ -417,8 +433,14 @@ if __name__ == "__main__":
     if not APP_PASSWORD:
         print("WARNING: APP_PASSWORD is not set - the site (including database editing) has NO login. "
               "Set APP_USER / APP_PASSWORD before exposing it publicly.")
-    uvicorn.run("main_page:app",
-                host=os.environ.get("HOST", "0.0.0.0"),
-                port=int(os.environ.get("PORT", "8000")),
-                reload=os.environ.get("RELOAD", "0") == "1",
-                proxy_headers=True, forwarded_allow_ips="*")
+    uvicorn.run(
+        "main_page:app",
+        host=os.environ.get("HOST", "0.0.0.0"),
+        port=int(os.environ.get("PORT", "8000")),
+        reload=os.environ.get("RELOAD", "0") == "1",
+        proxy_headers=True,
+        forwarded_allow_ips="*"
+    )
+
+# http://192.168.1.15:8000 -> mobile web
+# http://127.0.0.1:8000 -> local web

@@ -226,7 +226,7 @@ def delete_driver(d_id:int)-> bool:
 
 def reset_cartoons_count()-> int:
     query = '''
-    UPDATE drivers SET cartoons_count = 0;'''
+    UPDATE drivers SET cartoons_count = 0,driver_status = "un_available";'''
     with get_connection() as conn:
         cursor = conn.execute(query)
         if cursor.rowcount == 0:

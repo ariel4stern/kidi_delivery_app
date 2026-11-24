@@ -106,7 +106,7 @@ def patch_output_two_data(output_number:int,output_data:PatchOutputDataTwo):
     }
 
 @output_two_router.delete("/delete/table")
-def refresh_output_table_data():
+def refresh_output_table_data_two():
     deleted_table = delete_output_table_two()
     if not deleted_table:
         raise HTTPException(status_code=404, detail="No output row found.")

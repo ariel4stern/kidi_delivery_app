@@ -176,7 +176,7 @@ def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None :
 
 def update_day_point(d_id,day,point) -> int | Dict[str,Any] | None :
     query = '''
-    UPDATE point_distibutions SET 
+    UPDATE point_distributions SET 
     driver_id = ?,
     driver_name=(SELECT driver_name FROM drivers WHERE driver_id = ?)
     WHERE day = ? AND point = ?;'''

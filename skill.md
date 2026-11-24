@@ -95,14 +95,12 @@ with his purpose below.
 
 
 - the function from 'eb_router_output_table.py': patch_output_two_data(output_number:int,output_data:PatchOutputDataTwo)
- need to have a unique button, if this button clicked will pop up an input cell to be filled by the user with instruction
- of data reception by the function requires but pay attention in the PatchOutputDataTwo fields leave only the
+ need to have a unique button, if this button clicked will pop up an input cell to be filled by the user with instruction of data reception by the function requires but pay attention in the PatchOutputDataTwo fields leave only the
  output_number and driver_id number from PatchOutputDataTwo the store count will stay in db as it was before.
- The DataFrame details under this unique function must be relevant, use the function merged_output_tables() from 'f_funtions.py',
- After any change refresh this DataFrame with this function merged_output_tables().
- also will be shown for this function merged DataFrame from merged_output_tables() in 'f_functions.py'.
- after he clicked the confirmation button you should use the function merged_output_tables() in
-'f_functions.py', and refresh the DataFrame,
+ The DataFrame details under this unique function must be relevant, use the function merged_output_tables() from 'f_funtions.py', and show the DataFrame all the time
+ After any confirmation button was clicked refresh this DataFrame with this function merged_output_tables().
+ also .
+ 
  
 
 - from a_router_store.py -> functions: insert_store(store: Store),patch_store(store_number:int,update_store: StoreUpdate),delete_existing_store(store_number: int).

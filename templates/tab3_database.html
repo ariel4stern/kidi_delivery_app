@@ -1,0 +1,84 @@
+<section id="tab3">
+  <h2>Updating DataBase</h2>
+  <div class="row"><select id="rSel"></select><select id="fSel"></select></div>
+  <textarea id="jIn" rows="8" spellcheck="false"></textarea>
+  <button id="runBtn">Confirm and run</button>
+  <div id="runMsg" class="msg" hidden></div><div id="runOut"></div>
+  <hr>
+
+  <!-- ===== unique function: patch_output_two_data ===== -->
+  <h3>Change driver of a row in output_data_two</h3>
+  <div class="row">
+    <button id="p2Open">Change driver (patch_output_two_data)</button>
+  </div>
+
+  <!-- pop-up input cell (hidden until the unique button is clicked) -->
+  <div id="p2Pop" class="ov" style="display:none">
+    <div class="box">
+      <h3>patch_output_two_data</h3>
+      <p>Replace the <b>null</b> values with numbers:</p>
+      <ul>
+        <li><b>output_number</b> - the store number of the row in output_data_two</li>
+        <li><b>driver_id</b> - the id of the new driver for that row</li>
+      </ul>
+      <p>The store count is not changed - it stays in the database as it was.</p>
+      <textarea id="p2In" rows="4" spellcheck="false"></textarea>
+      <div id="p2Msg" class="msg" hidden></div>
+      <div class="row">
+        <button id="p2Btn">Confirm and update</button>
+        <button id="p2Close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DataFrame from merged_output_tables(): always visible -->
+  <h4>Current data (output_data + output_data_two)</h4>
+  <div id="mrgTable"></div>
+
+  <script>
+  (function(){
+    const $p=id=>document.getElementById(id);
+    const pop=$p('p2Pop'), inp=$p('p2In'), msg=$p('p2Msg');
+    const TEMPLATE='{\n  "output_number": null,\n  "driver_id": null\n}';
+
+    /* ---- pop-up open / close ---- */
+    const open=()=>{inp.value=TEMPLATE;msg.hidden=true;pop.style.display='flex';inp.focus()};
+    const close=()=>{pop.style.display='none'};
+    $p('p2Open').onclick=open;
+    $p('p2Close').onclick=close;
+    pop.addEventListener('click',e=>{if(e.target===pop)close()});
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+
+    /* ---- Confirm: run patch_output_two_data, then refresh merged_output_tables() ---- */
+    $p('p2Btn').addEventListener('click',async function(e){
+      e.stopImmediatePropagation();                 /* this handler is the only one that runs */
+      let d;
+      try{d=JSON.parse(inp.value)}catch(x){return say(msg,'The text is not valid JSON.',false)}
+      const ok=v=>Number.isInteger(v)&&v>0;
+      if(!ok(d.output_number)||!ok(d.driver_id))
+        return say(msg,'Replace both null values with numbers: output_number (store number) and driver_id.',false);
+
+      try{
+        /* -> main_page.py -> _patch_two -> patch_output_two_data(output_number, PatchOutputDataTwo(output_count=None, driver_id)) */
+        const r=await api('/api/manage/eb_router_output_table_two/patch_output_two_data',
+                          {output_number:d.output_number,driver_id:d.driver_id});
+        const row=(r.result&&r.result.updated_row)||{};
+        say(msg,'Success: store '+d.output_number+' now belongs to '+(row.driver_name||('driver '+d.driver_id))+'.',true)
+      }catch(err){say(msg,err.message,false)}
+      loadMerged();                                  /* merged_output_tables() -> table below */
+    });
+
+    /* ---- the DataFrame is shown all the time ---- */
+    document.addEventListener('DOMContentLoaded',()=>loadMerged());
+
+    /* ---- refresh it after ANY other confirmation too (Confirm and run, toolbar pop-ups, counting) ---- */
+    const baseApi=window.api;
+    window.api=async function(u,body,method){
+      try{return await baseApi(u,body,method)}
+      finally{
+        if((body!==undefined||method)&&String(u).indexOf('patch_output_two_data')<0)loadMerged()
+      }
+    };
+  })();
+  </script>
+</section>
