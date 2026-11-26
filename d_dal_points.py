@@ -1,7 +1,7 @@
 import sqlite3
 from contextlib import contextmanager
 from typing import List, Dict, Iterator, Any
-
+from datetime import datetime
 DB_NAME = 'deliveries_distribution.db'
 
 @contextmanager
@@ -24,7 +24,12 @@ def rows_exists(table_name:str) -> bool :
     with get_connection() as conn:
         cursor = conn.execute(query).fetchone()
         return bool(cursor[0])
+def get_current_day():
+    today = datetime.now()
 
+    day_name = today.strftime("%A")
+
+    return day_name.lower()
 def create_table_point_distributions() -> None :
     query = '''
     CREATE TABLE IF NOT EXISTS point_distributions (
@@ -51,22 +56,22 @@ def insert_point_distributions() -> int | None :
                       5,
                       5],
         'day': ['sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday','sunday', 'sunday', 'sunday',
-                'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday',
+                'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday', 'sunday','sunday',
                 'monday', 'monday', 'monday', 'monday', 'monday', 'monday', 'monday', 'monday', 'monday',
                 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday',
                 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday', 'tuesday',
                 'wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday',
                 'wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday','wednesday', 'wednesday', 'wednesday',
-                'wednesday', 'wednesday',
+                'wednesday', 'wednesday', 'wednesday',
                 'thursday', 'thursday', 'thursday', 'thursday','thursday', 'thursday', 'thursday', 'thursday',
                 'thursday', 'thursday', 'thursday', 'thursday','thursday', 'thursday', 'thursday', 'thursday',
                 'thursday', 'thursday', 'thursday', 'thursday',
                 'friday',
                 'saturday'],
-        'point': [3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37,
+        'point': [3,13,23,30,31,36,701,703,706,5,27,20,709,707,10,18,32,33,37,
                  17,21,24,25,34,39,22,26,1,
                  1,6,9,12,16,43,704,705,11,14,19,29,35,708,
-                 3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37,22,26,
+                 3,13,23,30,31,36,701,703,706,5,27,20,709,10,18,32,33,37,707,22,26,
                  1,6,9,12,16,43,704,705,11,14,19,29,35,708,17,21,24,25,34,39,
                  404,
                  405]
@@ -158,6 +163,14 @@ def get_all_dist_point() -> List[Dict[str,Any]] | None :
         if not rows:
             return None
         return [dict(row) for row in rows]
+def get_all_points_by_day(day:str) -> List[Dict[str,Any]] | None :
+    query='''
+    SELECT point from point_distributions WHERE day = ?;'''
+    with get_connection() as conn:
+        rows = conn.execute(query,(day,)).fetchall()
+        if not rows:
+            return None
+        return [dict(row) for row in rows]
 
 def get_dist_point(day:str ,point:int) -> Dict[str,Any] | None :
     query = '''
@@ -193,5 +206,6 @@ def delete_day_point(day:str,point:int) -> bool :
     with get_connection() as conn:
         cursor = conn.execute(query, (day, point))
         return cursor.rowcount > 0
+print(get_all_points_by_day('wednesday'))
 
 

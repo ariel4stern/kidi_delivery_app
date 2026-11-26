@@ -2,7 +2,9 @@ import os
 from pathlib import Path
 from typing import Tuple
 import pandas as pd
-
+from a_dal_stores import (
+    get_store
+)
 from c_dal_drivers import (
     get_cartoons_count,
     get_max_cartoons,
@@ -185,6 +187,21 @@ def export_excel():
 
     dataframe = merged_output_tables()
     dataframe = dataframe.sort_values(by=['driver_name','store_count'],na_position='last',ignore_index=True)
+    drivers_dict = {
+        "moshe": "משה",
+        "leonid": "לאוניד",
+        "uriel":"אוריאל",
+        "ishay":"ישי",
+        "nobody":"אף_אחד"
+    }
+    for i in range(len(dataframe)):
+        dataframe.loc[i]["store_name"] = get_store(dataframe.loc[i]["store_number"])["store_name"]
+
+    dataframe["cartoons_sum"] = (dataframe.groupby("driver_name")["store_count"].transform("sum"))
+
+    dataframe["driver_name"] = (dataframe["driver_name"].astype(str).map(drivers_dict))
+
+    dataframe = dataframe.drop(columns=["source","driver_id"])
 
     dataframe.to_excel(base_file_path, index=False)
     return base_file_path
