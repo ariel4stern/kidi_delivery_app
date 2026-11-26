@@ -44,6 +44,13 @@ from e_dal_output_table import (initialize_output_table, get_all_rows_output, ge
                                 update_output_count_driver_null, get_connection, get_current_day)
 from eb_dal_output_table_two import create_output_table_two
 
+initialize_stores()
+initialize_drivers()
+initialize_delivery_table()
+initialize_point_distributions()
+initialize_output_table()
+create_output_table_two()
+
 import a_router_store as r_store
 import b_router_delivery as r_deliv
 import c_router_drivers as r_drv
@@ -65,14 +72,6 @@ APP_PASSWORD = os.environ.get("APP_PASSWORD", "kidi8080")
 
 app = FastAPI(title="delivery_distribution")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-# ---- database bootstrap (order matters: drivers before point_distributions) ----
-initialize_stores()
-initialize_delivery_table()
-initialize_drivers()
-initialize_point_distributions()
-initialize_output_table()
-create_output_table_two()   # f_functions / export_excel expect this table to exist
 
 for r in (r_store.stores_router, r_deliv.delivery_router, r_drv.drivers_router,
           r_pts.point_router, r_out.output_router, r_out2.output_two_router):
@@ -442,5 +441,5 @@ if __name__ == "__main__":
         forwarded_allow_ips="*"
     )
 
-# http://192.168.1.15:8000 -> mobile web
+# http://172.22.0.1:8000/ -> mobile web
 # http://127.0.0.1:8000 -> local web

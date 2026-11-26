@@ -8,7 +8,6 @@ from e_dal_output_table import (
     get_all_rows_output,
     get_row_output,
     insert_row_output,
-    update_output_point_driver_id,
     patch_output_row,
     delete_row_output,
     delete_output_table,
@@ -71,18 +70,6 @@ def insert_new_output_row(output_data:OutputData):
     }
 
 
-@output_router.put("/{output_number}")
-def update_output_data_by_number(output_number:float,output_driver_id:int):
-    updated_row = get_row_output(output_number)
-    if updated_row is None:
-        raise HTTPException(status_code=404, detail="No output row found.")
-    updated_driver = update_output_data_by_number(output_number,output_driver_id)
-    if updated_driver is None:
-        raise HTTPException(status_code=404, detail="Output driver failed to update.")
-    return {
-        'status':"Success",
-        'updated_row': updated_row
-    }
 
 @output_router.patch("/patch/{output_number}")
 def patch_output_data(output_number,output_data:PatchOutputData):
@@ -104,12 +91,7 @@ def patch_output_data(output_number,output_data:PatchOutputData):
         'status':"Success",
         'updated_row': patched_row
     }
-d = PatchOutputData(output_count=4, driver_id=1 ,note='hello')
-patched = patch_output_row(store_number=3,
-                                   store_count=d.output_count,
-                                   driver_id=d.driver_id,
-                                   note=d.note)
-print(patched)
+
 @output_router.delete("/del/{output_number}")
 def delete_output_data_by_number(output_number:int):
     deleted = get_output_data_by_number(output_number)
@@ -139,5 +121,6 @@ def refresh_output_table_data():
         'details': "Table output_data deleted successfully."
     }
 
+print(get_all_rows_output())
 
 

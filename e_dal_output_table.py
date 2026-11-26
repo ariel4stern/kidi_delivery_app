@@ -2,9 +2,6 @@ import sqlite3
 from contextlib import contextmanager
 from typing import Iterator, List, Any, Dict
 from datetime import datetime
-
-from select import select
-
 from b_dal_delivery import (
     get_today_store_numbers
 )
@@ -78,7 +75,7 @@ def initialize_output_table()-> bool | None :
 
 def get_row_output(store_number:float) -> Dict[str,Any] | None :
     query = '''
-    SELECT store_number, store_count, driver_id, driver_name,note FROM output_data WHERE store_number = ?'''
+    SELECT * FROM output_data WHERE store_number = ?'''
     with get_connection() as conn:
         row = conn.execute(query, (store_number,)).fetchone()
         if row is None:
@@ -101,10 +98,10 @@ def get_all_rows_output() -> List[Dict[str,Any]] | None :
 
 def insert_row_output(store_number:float, store_count:int, driver_id ,note) -> Dict[str,Any] | None :
     query = '''
-    INSERT INTO output_data (store_number, store_count, driver_id ,note)
-    VALUES (?, ?, ? ,?)
+    INSERT INTO output_data (store_number, store_count, driver_id ,note ,driver_name)
+    VALUES (?, ?, ? ,? ,?)
     '''
-    parameters = [store_number, store_count, driver_id]
+    parameters = [store_number, store_count, driver_id,note]
     if driver_id is not None:
         select_query = '''
         SELECT driver_name FROM drivers WHERE driver_id = ?'''
@@ -114,15 +111,16 @@ def insert_row_output(store_number:float, store_count:int, driver_id ,note) -> D
                 raise ValueError(f"Not such driver_id {driver_id} ")
             driver_name = str(cursor[0])
             parameters.append(driver_name)
-
+    else:
+        parameters.append(None)
     with get_connection() as conn:
-        cursor = conn.execute(query, (store_number, store_count, driver_id ,note))
+        cursor = conn.execute(query, parameters)
         if cursor.rowcount == 0:
             return None
     return get_row_output(store_number)
 
 def patch_output_row(store_number,store_count,driver_id,note) -> int | Dict[str,Any] | None:
-    if all(x is None for x in [store_number,store_count,driver_id,note]):
+    if all(x is None for x in [store_count,driver_id,note]):
         print('store_number must be provided and with him driver_id')
         return 0
 
@@ -172,14 +170,13 @@ def patch_output_row(store_number,store_count,driver_id,note) -> int | Dict[str,
 def update_output_number(st_number:float,count:int,d_id:int) -> Dict[str,Any] | None:
     query = '''
     UPDATE output_data SET
-        store_number = ?,
         store_count  = ?,
         driver_id = ?,
         driver_name  = (SELECT driver_name FROM drivers WHERE driver_id = ?)
     WHERE store_number = ?
     '''
     with get_connection() as conn:
-        cursor = conn.execute(query, (st_number,count,d_id,d_id,st_number))
+        cursor = conn.execute(query, (count,d_id,d_id,st_number,))
         if cursor.rowcount == 0:
             return None
 
@@ -196,16 +193,7 @@ def update_output_count_driver_null(st_number:float,count:int) -> Dict[str,Any] 
             return None
 
     return get_row_output(st_number)
-def update_output_point_driver_id(st_number:float,driver_id:int) -> Dict[str,Any] | None:
-    query = '''
-    UPDATE output_data SET 
-            driver_id = ?
-            WHERE store_number = ?'''
-    with get_connection() as conn:
-        cursor = conn.execute(query, (driver_id,st_number))
-        if cursor.rowcount == 0:
-            return None
-    return get_row_output(st_number)
+
 def clear_output_driver(st_number:float, count:int) -> Dict[str,Any] | None:
     query = '''
     UPDATE output_data SET store_count = ?, driver_id = NULL, driver_name = NULL

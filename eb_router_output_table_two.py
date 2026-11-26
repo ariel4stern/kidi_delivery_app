@@ -26,10 +26,12 @@ class OutputDataTwo(BaseModel):
     output_number : float = Field(...,gt=0)
     output_count : int = Field(...,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
+    note : Optional[str] = Field(None,min_length=2)
 
 class PatchOutputDataTwo(BaseModel):
     output_count : Optional[int] = Field(None,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
+    note : Optional[str] = Field(None,min_length=2)
 
 class UpdateOutputDataId(BaseModel):
     output_driver_id : int = Field(...,gt=0)
@@ -59,7 +61,8 @@ def get_output_data_two_by_number(output_number:int):
 def insert_new_output_two_row(output_data:OutputDataTwo):
     inserted = insert_row_output_two(store_number=output_data.output_number,
                                  store_count=output_data.output_count,
-                                 driver_id=output_data.driver_id)
+                                 driver_id=output_data.driver_id,
+                                    note=output_data.note)
     if inserted == 1:
         raise HTTPException(status_code=404, detail="driver_id not found.")
     if inserted == 2:
@@ -71,6 +74,8 @@ def insert_new_output_two_row(output_data:OutputDataTwo):
         'status':"Success",
         'inserted_row': inserted
     }
+
+
 
 @output_two_router.put("/up/{output_number}")
 def update_output_data_two_by_number(output_number:float,up_driver_id:UpdateOutputDataId):
@@ -90,7 +95,8 @@ def update_output_data_two_by_number(output_number:float,up_driver_id:UpdateOutp
 def patch_output_two_data(output_number:int,output_data:PatchOutputDataTwo):
     patched_row_two = patch_output_row_two(store_number=output_number,
                                    store_count=output_data.output_count,
-                                   driver_id=output_data.driver_id)
+                                   driver_id=output_data.driver_id,
+                                           note=output_data.note)
     if patched_row_two == 0:
         raise HTTPException(status_code=404, detail="parameters provided Wrong.")
 
@@ -104,6 +110,9 @@ def patch_output_two_data(output_number:int,output_data:PatchOutputDataTwo):
         'status':"Success",
         'updated_row': patched_row_two
     }
+pt = PatchOutputDataTwo(driver_id=2)
+patched = patch_output_two_data(output_number=2,output_data=pt)
+print(patched)
 
 @output_two_router.delete("/delete/table")
 def refresh_output_table_data_two():
