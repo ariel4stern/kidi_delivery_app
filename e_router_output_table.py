@@ -27,10 +27,13 @@ class OutputData(BaseModel):
     output_number : float = Field(...,gt=0)
     output_count : int = Field(...,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
+    note : Optional[str] = Field(None,min_length=2)
 
 class PatchOutputData(BaseModel):
     output_count : Optional[int] = not Field(None,gt=0)
     driver_id : Optional[int] = Field(None,gt=0)
+    note : Optional[str] = Field(None,min_length=2)
+
 
 @output_router.get("/")
 def get_output_data():
@@ -57,7 +60,8 @@ def get_output_data_by_number(output_number:int):
 def insert_new_output_row(output_data:OutputData):
     inserted = insert_row_output(store_number=output_data.output_number,
                                  store_count=output_data.output_count,
-                                 driver_id=output_data.driver_id)
+                                 driver_id=output_data.driver_id,
+                                 note=output_data.note)
     if inserted is None:
         raise HTTPException(status_code=404, detail="output row Failed to insert.")
 
@@ -65,6 +69,7 @@ def insert_new_output_row(output_data:OutputData):
         'status':"Success",
         'inserted_row': inserted
     }
+
 
 @output_router.put("/{output_number}")
 def update_output_data_by_number(output_number:float,output_driver_id:int):
@@ -83,7 +88,9 @@ def update_output_data_by_number(output_number:float,output_driver_id:int):
 def patch_output_data(output_number,output_data:PatchOutputData):
     patched_row = patch_output_row(store_number=output_number,
                                    store_count=output_data.output_count,
-                                   driver_id=output_data.driver_id)
+                                   driver_id=output_data.driver_id,
+                                   note=output_data.note)
+
     if patched_row == 0:
         raise HTTPException(status_code=404, detail="parameters provided Wrong.")
 
@@ -97,7 +104,12 @@ def patch_output_data(output_number,output_data:PatchOutputData):
         'status':"Success",
         'updated_row': patched_row
     }
-
+d = PatchOutputData(output_count=4, driver_id=1 ,note='hello')
+patched = patch_output_row(store_number=3,
+                                   store_count=d.output_count,
+                                   driver_id=d.driver_id,
+                                   note=d.note)
+print(patched)
 @output_router.delete("/del/{output_number}")
 def delete_output_data_by_number(output_number:int):
     deleted = get_output_data_by_number(output_number)

@@ -206,6 +206,5 @@ def delete_day_point(day:str,point:int) -> bool :
     with get_connection() as conn:
         cursor = conn.execute(query, (day, point))
         return cursor.rowcount > 0
-print(get_all_points_by_day('wednesday'))
 
 

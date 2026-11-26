@@ -46,7 +46,8 @@ def create_output_table() -> None :
         store_count INTEGER DEFAULT 0,
         driver_id INTEGER DEFAULT null,
         driver_name TEXT DEFAULT null,
-        
+        note TEXT DEFAULT null,
+
         FOREIGN KEY (driver_id)
         REFERENCES drivers (driver_id)
         ON DELETE SET NULL
@@ -77,7 +78,7 @@ def initialize_output_table()-> bool | None :
 
 def get_row_output(store_number:float) -> Dict[str,Any] | None :
     query = '''
-    SELECT store_number, store_count, driver_id, driver_name FROM output_data WHERE store_number = ?'''
+    SELECT store_number, store_count, driver_id, driver_name,note FROM output_data WHERE store_number = ?'''
     with get_connection() as conn:
         row = conn.execute(query, (store_number,)).fetchone()
         if row is None:
@@ -85,7 +86,7 @@ def get_row_output(store_number:float) -> Dict[str,Any] | None :
         return dict(row)
 def get_all_rows_output() -> List[Dict[str,Any]] | None :
     query = '''
-    SELECT store_number, store_count, driver_id, driver_name FROM output_data
+    SELECT store_number, store_count, driver_id, driver_name,note FROM output_data
     '''
     try:
         with get_connection() as conn:
@@ -98,10 +99,10 @@ def get_all_rows_output() -> List[Dict[str,Any]] | None :
             return None
         raise
 
-def insert_row_output(store_number:float, store_count:int, driver_id) -> Dict[str,Any] | None :
+def insert_row_output(store_number:float, store_count:int, driver_id ,note) -> Dict[str,Any] | None :
     query = '''
-    INSERT INTO output_data (store_number, store_count, driver_id)
-    VALUES (?, ?, ?)
+    INSERT INTO output_data (store_number, store_count, driver_id ,note)
+    VALUES (?, ?, ? ,?)
     '''
     parameters = [store_number, store_count, driver_id]
     if driver_id is not None:
@@ -115,13 +116,13 @@ def insert_row_output(store_number:float, store_count:int, driver_id) -> Dict[st
             parameters.append(driver_name)
 
     with get_connection() as conn:
-        cursor = conn.execute(query, (store_number, store_count, driver_id))
+        cursor = conn.execute(query, (store_number, store_count, driver_id ,note))
         if cursor.rowcount == 0:
             return None
     return get_row_output(store_number)
 
-def patch_output_row(store_number,store_count,driver_id) -> int | Dict[str,Any] | None:
-    if all(x is None for x in [store_number,store_count,driver_id]):
+def patch_output_row(store_number,store_count,driver_id,note) -> int | Dict[str,Any] | None:
+    if all(x is None for x in [store_number,store_count,driver_id,note]):
         print('store_number must be provided and with him driver_id')
         return 0
 
@@ -152,6 +153,11 @@ def patch_output_row(store_number,store_count,driver_id) -> int | Dict[str,Any] 
             driver_name = str(cursor[0])
             query = query + ' driver_name = ?,'
             parameters.append(driver_name)
+
+    if note is not None:
+        query = query + ' note = ?,'
+        parameters.append(note)
+
 
 
     query = query.rstrip(', ') + ' WHERE store_number = ?'

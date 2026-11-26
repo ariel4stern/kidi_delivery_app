@@ -160,8 +160,9 @@ def merged_output_tables():
     """output_data + output_data_two as one DataFrame (column 'source' tells where each row came from).
     A store that has no driver in output_data and was moved to output_data_two is shown only once."""
     data1 = pd.DataFrame(get_all_rows_output() or [])
+    print(data1)
     data2 = pd.DataFrame(get_all_rows_output_two() or []) if rows_exists("output_data_two") else pd.DataFrame()
-
+    print(data2)
     if not data1.empty and not data2.empty:
         moved = data1['driver_id'].isna() & data1['store_number'].isin(data2['store_number'])
         data1 = data1[~moved]
@@ -186,22 +187,14 @@ def export_excel():
     base_file_path = Path(REPORTS_DIR_PATH, f"distribution_report_{file_number_str}.xlsx")
 
     dataframe = merged_output_tables()
+    print(dataframe)
     dataframe = dataframe.sort_values(by=['driver_name','store_count'],na_position='last',ignore_index=True)
-    drivers_dict = {
-        "moshe": "משה",
-        "leonid": "לאוניד",
-        "uriel":"אוריאל",
-        "ishay":"ישי",
-        "nobody":"אף_אחד"
-    }
+
     for i in range(len(dataframe)):
-        dataframe.loc[i]["store_name"] = get_store(dataframe.loc[i]["store_number"])["store_name"]
+        dataframe.loc[i, 'driver_name'] = driver_name_to_hebrow(str(dataframe.loc[i, 'driver_name']))
+        dataframe.loc[i,'store_name'] = str(get_store(int(dataframe.loc[i, 'store_number']))['store_name']).replace('_', ' ')
 
-    dataframe["cartoons_sum"] = (dataframe.groupby("driver_name")["store_count"].transform("sum"))
-
-    dataframe["driver_name"] = (dataframe["driver_name"].astype(str).map(drivers_dict))
-
-    dataframe = dataframe.drop(columns=["source","driver_id"])
+    dataframe = dataframe.drop(columns=['source','driver_id'])
 
     dataframe.to_excel(base_file_path, index=False)
     return base_file_path
@@ -233,6 +226,17 @@ def insert_to_output_two_all_null() -> int | None :
         else:
             print(f'store {st_number} was not inserted to output_data_two (code {result})')
     return inserted
+def driver_name_to_hebrow(name:str)->str:
+    drivers_dict = {
+        "moshe": "משה",
+        "leonid": "לאוניד",
+        "uriel": "אוריאל",
+        "ishay": "ישי",
+        "nobody": "אף_אחד"
+    }
+    if name in drivers_dict.keys():
+        return drivers_dict[name]
+    return name
 
 
 df_dict ={'store_numbers': [3,23,30,31],

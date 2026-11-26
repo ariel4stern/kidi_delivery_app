@@ -30,6 +30,7 @@ def create_output_table_two() -> None:
             store_count INTEGER DEFAULT 0,
             driver_id INTEGER DEFAULT null,
             driver_name TEXT DEFAULT null,
+            note TEXT DEFAULT null,
 
             FOREIGN KEY (driver_id)
             REFERENCES drivers (driver_id)
@@ -61,17 +62,17 @@ def get_all_rows_output_two() -> List[Dict[str,Any]] | None :
             return None
         raise
 
-def insert_row_output_two(store_number:float, store_count:int, driver_id) -> Dict[str,Any] | int | None :
+def insert_row_output_two(store_number:float, store_count:int, driver_id,note) -> Dict[str,Any] | int | None :
     try:
         with get_connection() as conn:
             if driver_id is not None:
 
                 query = '''
-                INSERT INTO output_data_two (store_number, store_count, driver_id,driver_name)
-                VALUES (?, ?, ? ,?)
+                INSERT INTO output_data_two (store_number, store_count, driver_id,note,driver_name)
+                VALUES (?, ?, ? ,?,?)
                 '''
 
-                parameters = [store_number, store_count, driver_id]
+                parameters = [store_number, store_count, driver_id,note]
                 select_query = '''
                 SELECT driver_name FROM drivers WHERE driver_id = ?'''
 
@@ -82,8 +83,8 @@ def insert_row_output_two(store_number:float, store_count:int, driver_id) -> Dic
                 driver_name = str(cursor[0])
                 parameters.append(driver_name)
             else:
-                query = '''INSERT INTO output_data_two (store_number, store_count)
-                VALUES (?, ?)
+                query = '''INSERT INTO output_data_two (store_number, store_count,note)
+                VALUES (?, ?,?)
                 '''
                 parameters = [store_number, store_count]
 
